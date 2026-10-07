@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strata Performance Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Kumbh+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#0C6291;--accent:#0E80BB;--ink:#101619;--ink2:#3B3F3F;--muted:#6B7280;--tint:#D6E5EF;--tint2:#EAF2F7;--bg:#F3F8F8;--border:#D6E5EF;--row:#E3EEF3;--wborder:#B9D3E4;--warn:#F2B705;--ok:#2E7D32;--bad:#B3261E;
+--b1:#084A6E;--b2:#0B73A8;--b3:#D6E5EF}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Kumbh Sans","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.5;color:var(--ink);background:linear-gradient(180deg,var(--tint2) 0,var(--bg) 420px) no-repeat,var(--bg);min-height:100vh}
+h1,h2,h3,.hd{font-family:"Instrument Sans","Kumbh Sans",Arial,sans-serif;letter-spacing:-0.01em}
+a{color:var(--brand)}
+button{font:inherit;cursor:pointer}
+.btn{min-height:44px;padding:0 24px;border-radius:9999px;font-weight:700;border:0;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{background:#0A5278}.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.o{background:#fff;color:var(--brand);border:1px solid var(--brand)}.btn.o:hover{background:var(--tint2)}
+.btn.sm{min-height:34px;padding:0 16px;font-size:13px}
+.f{width:100%;min-height:44px;padding:0 10px;font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--accent);border-radius:6px}
+.f:focus,.btn:focus-visible,.tab:focus-visible{outline:3px solid #BFE0F0;outline-offset:1px}
+.f[readonly],.f:disabled{background:var(--tint2);border-color:var(--border)}
+textarea.f{padding:10px;min-height:80px}
+label.l{display:block;font-size:13px;font-weight:700;margin-bottom:4px}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:24px}
+.wrap{max-width:1536px;margin:0 auto;padding:0 32px}
+header.top{background:linear-gradient(180deg,var(--tint) 0%,var(--tint2) 100%)}
+.hrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px 32px;padding-block:20px}
+.logo{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:700;line-height:1}
+.welcome{flex:1 1 640px;min-width:0;background:var(--brand);color:#fff;border-radius:16px;padding:14px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 32px}
+.welcome h1{margin:0;font-size:30px;line-height:1.2}
+.welcome .d{color:var(--tint)}
+.welcome dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:8px 32px}
+.welcome dt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#BFD9EA}
+.welcome dd{margin:0;font-weight:700}
+.pill{display:inline-block;background:var(--brand);color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:99px}
+.tabrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{padding:10px 24px;border-radius:9999px;font-weight:700;font-size:16px;background:#fff;color:var(--brand);border:1px solid var(--wborder)}
+.tab[aria-selected=true]{background:var(--brand);color:#fff;border-color:var(--brand)}
+main{padding-block:20px 56px}
+.grid{display:grid;gap:16px}
+.tiles{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:16px}
+.tile{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 20px}
+.tile .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font-family:"Instrument Sans",sans-serif;font-size:32px;font-weight:700;color:var(--brand);line-height:1.2}
+.tile .s{font-size:13px;color:var(--muted)}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:900px}
+th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;background:var(--bg)}
+td{padding:10px 12px;border-top:1px solid var(--row);vertical-align:middle}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--tint2)}
+tr.mine td{background:#FFFCEB}
+.chip{display:inline-block;font-weight:700;padding:3px 10px;border-radius:6px;font-size:14px}
+.r-o{background:var(--b1);color:#fff}.r-e{background:var(--b2);color:#fff}.r-m{background:var(--b3);color:var(--brand)}.r-b{background:#E3EEF3;color:var(--ink2)}
+.st{font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--warn);display:inline-block}
+.dot.ok{background:var(--ok)}.dot.grey{background:#9AA7BA}
+.spread{display:flex;border-radius:8px;overflow:hidden;height:32px;background:var(--b3)}
+.spread div{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.filters .f{width:auto;min-width:180px}
+.journey{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.step{flex:1 1 140px;border:1px solid var(--border);border-top:4px solid var(--border);border-radius:8px;padding:8px 12px;background:#fff;font-size:13px}
+.step b{display:block;font-size:14px}.step.done{border-top-color:var(--brand)}.step.cur{border-top-color:var(--warn);background:#FFFCEB}
+.msg{padding:10px 14px;border-radius:8px;font-weight:600;margin:12px 0}
+.msg.err{background:#FDECEA;color:var(--bad)}.msg.ok{background:var(--tint2);color:var(--brand)}
+.split{display:grid;grid-template-columns:3fr 7fr;gap:28px;align-items:start}
+@media(max-width:1000px){.split{grid-template-columns:1fr}.wrap{padding:0 16px}}
+.cascade{border-left:3px solid var(--tint);margin-left:8px;padding-left:16px}
+.goal{padding:8px 0}.goal small{color:var(--muted)}
+.tag{font-size:11px;font-weight:700;letter-spacing:.06em;padding:1px 8px;border-radius:4px;background:var(--tint);color:var(--brand);margin-right:8px}
+.cm{background:var(--bg);border-radius:8px;padding:10px 14px;margin-top:10px}.cm small{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}
+.login{max-width:420px;margin:12vh auto;padding:0 16px}
+.sc td input.f{min-height:38px}
+.num{width:72px}
+.muted{color:var(--muted)}
+.pp{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-bottom:16px}
+.pp .g2{display:grid;gap:12px;grid-template-columns:1fr 1fr}.pp .l{margin-top:12px}
+.cred{background:var(--tint2);border:1px solid var(--wborder);border-radius:12px;padding:16px 20px;margin-bottom:16px}
+.cred code{font-family:ui-monospace,Menlo,monospace;background:#fff;padding:2px 8px;border-radius:6px;border:1px solid var(--border)}
+.errl{margin:8px 0 0;padding-left:18px;color:var(--bad);font-size:13px}
+.inact{opacity:.55}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const LOGO='<svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true"><path d="M8.7724 1.08177C10.4965.367624 12.3444 6.1e-5 14.2105 6.1e-5V10.658C14.2105 12.62 12.62 14.2106 10.6579 14.2106H0C0 12.3444.367563 10.4966 1.08171 8.77246 1.79586 7.04836 2.8426 5.4818 4.16216 4.16223 5.48174 2.84266 7.04829 1.79592 8.7724 1.08177Z" fill="#0C6291"/><path d="M24.5619 1.0818C26.286.367655 28.1339 9.2e-5 30.0001 9.2e-5V10.658C30.0001 12.62 28.4095 14.2106 26.4474 14.2106H15.7896C15.7896 12.3445 16.1571 10.4966 16.8713 8.77249 17.5854 7.04839 18.6321 5.48183 19.9517 4.16226 21.2713 2.84269 22.8378 1.79595 24.5619 1.0818Z" fill="#0C6291"/><path d="M5.43805 28.9184C3.71395 29.6325 1.86608 30.0001-.000077 30.0001V19.3422C-.000077 17.3801 1.59049 15.7896 3.55255 15.7896H14.2104C14.2104 17.6557 13.8429 19.5036 13.1287 21.2277 12.4146 22.9518 11.3679 24.5184 10.0483 25.8379 8.72871 27.1575 7.16216 28.2042 5.43805 28.9184Z" fill="#0C6291"/><path d="M5.43805 28.9184C3.71395 29.6325 1.86608 30.0001-.000077 30.0001V19.3422C-.000077 17.3801 1.59049 15.7896 3.55255 15.7896H14.2104C14.2104 17.6557 13.8429 19.5036 13.1287 21.2277 12.4146 22.9518 11.3679 24.5184 10.0483 25.8379 8.72871 27.1575 7.16216 28.2042 5.43805 28.9184Z" transform="translate(15.7896 0)" fill="#0C6291"/></svg>';
+const $app=document.getElementById('app');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ROLE={employee:'Employee',line_manager:'Line manager',overall_manager:'Overall manager',calibration:'Calibration committee',cos:'Chief of Staff',ceo:'CEO'};
+const STATUS={draft:'Draft',submitted:'With line manager',line_scored:'With overall manager',om_approved:'With calibration committee',calibrated:'With Chief of Staff',cos_approved:'With CEO',ceo_approved:'Final'};
+const ORDER=['draft','submitted','line_scored','om_approved','calibrated','cos_approved','ceo_approved'];
+const JOURNEY=[['Self score','submitted'],['Line manager','line_scored'],['Overall manager','om_approved'],['Calibration','calibrated'],['Chief of Staff','cos_approved'],['CEO','ceo_approved']];
+const TABS={employee:['mine'],line_manager:['mine','reports','goals'],overall_manager:['mine','dash','goals'],calibration:['dash'],cos:['mine','dash','goals'],ceo:['dash','goals']};
+const TABNAME={mine:'My scorecard',reports:'Direct reports',dash:'Dashboard',goals:'Goals',people:'People'};
+const tabsFor=u=>TABS[u.role].concat(u.is_admin?['people']:[]);
+const nowQ=()=>'Q'+(Math.floor(new Date().getMonth()/3)+1);
+const S={token:localStorage.getItem('pms_token'),user:null,tab:null,fy:new Date().getFullYear(),quarter:nowQ(),review:null,page:1,filter:{q:'',r:'',s:''},auditAll:false,msg:null,draft:null};
+
+async function api(method,path,body){
+  const r=await fetch('/api'+path,{method,headers:{'content-type':'application/json',...(S.token?{authorization:'Bearer '+S.token}:{})},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401&&S.user){logout();throw new Error('Session expired. Sign in again.');}
+  if(!r.ok)throw new Error(j.error||'Something went wrong.');
+  return j;
+}
+function logout(){localStorage.removeItem('pms_token');S.token=null;S.user=null;S.creds=null;S.edit=null;S.review=null;S.draft=null;render();}
+const ratingClass=l=>({'Outstanding':'r-o','Exceeds Expectation':'r-e','Meets Expectation':'r-m'}[l]||'r-b');
+const fmtDate=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+const fmtTime=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+const chip=sc=>sc.rating?`<span class="chip ${ratingClass(sc.rating)}">${sc.manager_total.toFixed(2)}</span>`:'<span class="muted">Not scored</span>';
+
+/* ---------- shell ---------- */
+function shell(inner){
+  const u=S.user,tabs=tabsFor(u);
+  return `<header class="top"><div class="wrap">
+  <div class="hrow"><div class="logo">${LOGO}<span class="hd">Strata</span></div>
+  <div class="welcome"><div><h1>Welcome, ${esc(u.name.split(' ')[0])}</h1><div class="d">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
+  <dl><div><dt>Job title</dt><dd>${esc(u.job_title||'')}</dd></div><div><dt>Email</dt><dd>${esc(u.email)}</dd></div><div><dt>Practice area</dt><dd>${esc(u.practice||'')}</dd></div><div><dt>Role</dt><dd>${esc(ROLE[u.role])}</dd></div></dl></div>
+  <div style="text-align:right"><div style="color:var(--ink2)">Performance Management System</div><span class="pill">${esc(ROLE[u.role])}</span> <button class="btn o sm" data-act="logout">Sign out</button></div></div>
+  <div class="tabrow"><div class="tabs" role="tablist">${tabs.map(t=>`<button class="tab" role="tab" aria-selected="${S.tab===t&&!S.review}" data-tab="${t}">${TABNAME[t]}</button>`).join('')}</div>
+  <div class="row"><label class="l" style="margin:0" for="fy">Quarter</label><select id="fy" class="f" style="width:150px"><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select><span class="muted">FY${S.fy}</span></div></div>
+  </div></header><main class="wrap">${S.msg?`<div class="msg ${S.msg.t}">${esc(S.msg.m)}</div>`:''}${inner}</main>`;
+}
+function bindShell(){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.review=null;S.page=1;S.msg=null;S.creds=null;S.edit=null;render();});
+  const q=document.getElementById('fy');if(q){q.value=S.quarter;q.onchange=()=>{S.quarter=q.value;S.review=null;S.draft=null;S.page=1;render();};}
+  const lo=document.querySelector('[data-act=logout]');if(lo)lo.onclick=logout;
+}
+
+/* ---------- login ---------- */
+function loginView(){
+  $app.innerHTML=`<div class="login"><div class="logo" style="margin-bottom:24px">${LOGO}<span class="hd">Strata</span></div>
+  <div class="card"><h2 style="margin:0 0 4px">Sign in</h2><p class="muted" style="margin:0 0 16px">Performance Management System</p>
+  <div id="lm"></div><form id="lf"><label class="l" for="em">Work email</label><input id="em" class="f" type="email" autocomplete="username" required>
+  <label class="l" for="pw" style="margin-top:12px">Password</label><input id="pw" class="f" type="password" autocomplete="current-password" required>
+  <button class="btn" style="margin-top:20px;width:100%">Sign in</button></form></div></div>`;
+  document.getElementById('lf').onsubmit=async e=>{e.preventDefault();
+    try{const j=await api('POST','/v1/auth/login',{email:em.value,password:pw.value});S.token=j.token;localStorage.setItem('pms_token',j.token);S.user=j.user;S.tab=tabsFor(j.user)[0];render();}
+    catch(x){document.getElementById('lm').innerHTML=`<div class="msg err">${esc(x.message)}</div>`;}};
+}
+function changePwView(){
+  $app.innerHTML=`<div class="login"><div class="logo" style="margin-bottom:24px">${LOGO}<span class="hd">Strata</span></div>
+  <div class="card"><h2 style="margin:0 0 4px">Choose a new password</h2><p class="muted" style="margin:0 0 16px">Use at least 10 characters.</p><div id="lm"></div>
+  <form id="cf"><label class="l" for="cp">Temporary password</label><input id="cp" class="f" type="password" required>
+  <label class="l" for="np" style="margin-top:12px">New password</label><input id="np" class="f" type="password" minlength="10" required>
+  <button class="btn" style="margin-top:20px;width:100%">Save and continue</button></form></div></div>`;
+  document.getElementById('cf').onsubmit=async e=>{e.preventDefault();
+    try{await api('POST','/v1/auth/change-password',{current_password:cp.value,new_password:np.value});S.user.must_change_password=false;render();}
+    catch(x){document.getElementById('lm').innerHTML=`<div class="msg err">${esc(x.message)}</div>`;}};
+}
+
+/* ---------- my scorecard ---------- */
+const calc=(rows,f)=>{if(rows.some(r=>r[f]===''||r[f]==null))return null;const c={};rows.forEach(r=>{c[r.category]=c[r.category]||{w:+r.category_weight,s:0};c[r.category].s+=(+r.weight_in_category*+r[f])/100;});return Math.round(Object.values(c).reduce((a,x)=>a+x.w*x.s/100,0)*100)/100;};
+function weightMsgs(rows){const m=[],c={};rows.forEach(r=>{c[r.category]=c[r.category]||{w:+r.category_weight,t:0};c[r.category].t+=+r.weight_in_category;});
+  const tw=Object.values(c).reduce((a,x)=>a+x.w,0);if(Math.abs(tw-100)>.001)m.push(`Category weights total ${tw}%, they must total 100%.`);
+  for(const[n,x]of Object.entries(c))if(Math.abs(x.t-100)>.001)m.push(`KPI weights in "${n}" total ${x.t}%, they must total 100%.`);return m;}
+const bandFor=(s,cfg)=>s==null?null:cfg.bands.find(b=>s>=b.min).label;
+
+async function mineView(){
+  const list=(await api('GET',`/v1/scorecards?fy=${S.fy}&quarter=${S.quarter}`)).scorecards;
+  const mine=list.find(s=>s.employee.id===S.user.id);
+  if(!mine){
+    $app.innerHTML=shell(`<div class="card" style="max-width:640px"><h2 style="margin-top:0">No scorecard for ${S.quarter} FY${S.fy} yet</h2><p class="muted">Start from the standard KPI template and adjust it with your line manager.</p><button class="btn" id="mk">Create my scorecard</button></div>`);bindShell();
+    document.getElementById('mk').onclick=async()=>{try{await api('POST','/v1/scorecards',{fy:S.fy,quarter:S.quarter});S.draft=null;render();}catch(e){flash('err',e.message);}};return;}
+  const d=await api('GET','/v1/scorecards/'+mine.id);
+  const cfg=await getCfg(),goals=(await api('GET','/v1/goals?fy='+S.fy)).goals;
+  const sc=d.scorecard,editable=sc.status==='draft';
+  if(!S.draft||S.draft.id!==sc.id)S.draft={id:sc.id,rows:d.kpis.map(k=>({...k})),url:sc.proof_of_work_url||''};
+  const T=S.draft;
+  const goalList=l=>goals.filter(g=>g.level===l).map((g,i)=>`<div class="goal">${i+1}. ${esc(g.title)}${g.practice&&l!=='company'?` <small>(${esc(g.practice)})</small>`:''}</div>`).join('')||'<div class="goal muted">None set yet</div>';
+  const cats=[...new Set(T.rows.map(r=>r.category))].map(c=>({n:c,w:T.rows.find(r=>r.category===c).category_weight}));
+  $app.innerHTML=shell(`<div class="split"><aside class="card"><h2 style="margin:0 0 16px;font-size:20px;color:var(--brand)">Goal alignment <small class="muted" style="font-weight:400">FY${S.fy}</small></h2>
+    <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em">COMPANY GOALS</div>${goalList('company')}
+    <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em;margin-top:12px">PRACTICE GOALS</div>${goalList('practice')}
+    <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em;margin-top:12px">TEAM GOALS</div>${goalList('team')}
+    <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em;margin-top:12px">MY KPI CATEGORIES</div>${cats.map(c=>`<div class="row" style="justify-content:space-between;background:var(--bg);border-radius:6px;padding:8px 12px;margin-top:6px"><span>${esc(c.n)}</span><b>${c.w}%</b></div>`).join('')}</aside>
+  <section class="card" style="padding:24px 0"><div style="padding:0 24px" class="row"><h2 style="margin:0;font-size:22px;color:var(--brand);flex:1">Performance Evaluation</h2>
+    <div style="flex:0 1 420px;min-width:240px"><label class="l" for="pow">Proof of work (Notion link)</label><input id="pow" class="f" type="url" placeholder="https://www.notion.so/..." value="${esc(T.url)}" ${editable?'':'readonly'}></div></div>
+    ${journey(sc)}<div class="tblwrap" style="margin-top:8px"><table class="sc"><thead><tr><th>#</th><th>KPI category</th><th>Weight %</th><th>KPI</th><th>Weight in category %</th><th>Self score</th><th>Manager</th>${editable?'<th></th>':''}</tr></thead><tbody id="kb">${T.rows.map((r,i)=>kpiRow(r,i,editable)).join('')}</tbody></table></div>
+    <div id="wm"></div>
+    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'<button class="btn o sm" id="addk">+ Add KPI</button>':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
+    <div style="margin:16px 24px 0;padding-top:16px;border-top:1px solid var(--row)" class="row"><span id="vs" style="font-weight:700"></span><span style="font-size:18px">Calculated score <strong id="tot" style="font-size:32px;color:var(--brand)"></strong> / 5</span><span id="rt"></span>${sc.manager_total!=null?`<span>Manager score <span class="chip ${ratingClass(sc.rating)}">${sc.manager_total.toFixed(2)}</span> ${esc(sc.rating||'')}</span>`:''}</div>
+    ${sc.status!=='draft'?`<div style="padding:0 24px"><button class="btn o sm" style="margin-top:12px" data-open="${sc.id}">Open review page</button></div>`:''}</section></div>${commentsBlock(d)}`);
+  bindShell();
+  const upd=()=>{const t=calc(T.rows,'self_score'),m=weightMsgs(T.rows);document.getElementById('tot').textContent=t==null?'–':t.toFixed(2);
+    document.getElementById('rt').innerHTML=t==null?'':`<span class="chip ${ratingClass(bandFor(t,cfg))}">${esc(bandFor(t,cfg))}</span>`;
+    document.getElementById('vs').innerHTML=m.length?'<span style="color:var(--bad)">Weights need fixing</span>':'<span style="color:var(--ok)">Total weight 100% (valid)</span>';
+    document.getElementById('wm').innerHTML=m.length?`<div class="msg err" style="margin:12px 24px 0">${m.map(esc).join('<br>')}</div>`:'';};
+  upd();
+  if(editable){
+    document.getElementById('pow').oninput=e=>T.url=e.target.value;
+    document.getElementById('kb').oninput=e=>{const i=+e.target.dataset.i,f=e.target.dataset.f;if(f==null)return;T.rows[i][f]=e.target.value;upd();};
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{T.rows.splice(+b.dataset.del,1);render();});
+    document.getElementById('addk').onclick=()=>{const l=T.rows[T.rows.length-1]||{category:'New category',category_weight:0};T.rows.push({category:l.category,category_weight:l.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});render();};
+    const payload=()=>({kpis:T.rows.map(r=>({category:r.category,category_weight:r.category_weight,kpi:r.kpi,weight_in_category:r.weight_in_category,self_score:r.self_score})),proof_of_work_url:T.url||null});
+    document.getElementById('save').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());flash('ok','Draft saved.');}catch(e){flash('err',e.message);}};
+    document.getElementById('sub').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());await api('POST',`/v1/scorecards/${sc.id}/submit`);S.draft=null;flash('ok','Submitted to your line manager.');}catch(e){flash('err',e.message);}};
+  }
+  bindComments(sc.id);bindOpen();
+}
+function kpiRow(r,i,ed){const a=ed?'':'readonly';const inp=(f,v,c='')=>`<input class="f ${c}" data-i="${i}" data-f="${f}" value="${esc(v==null?'':v)}" ${a}>`;
+  const first=i===0||false;
+  return `<tr><td>${i+1}</td><td>${inp('category',r.category)}</td><td>${inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi)}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}</td><td>${ed?`<input class="f num" type="number" min="1" max="5" step="1" data-i="${i}" data-f="self_score" value="${esc(r.self_score==null?'':r.self_score)}">`:esc(r.self_score)}</td><td style="font-weight:700">${r.manager_score==null?'–':r.manager_score}</td>${ed?`<td><button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
+function journey(sc){const idx=ORDER.indexOf(sc.status);let curDone=false;
+  return `<div class="journey" style="padding:0 24px">${JOURNEY.map(([n,st],i)=>{const done=idx>=ORDER.indexOf(st);const cur=!done&&!curDone&&sc.status!=='draft';if(cur)curDone=true;
+    return `<div class="step ${done?'done':cur?'cur':''}"><b>${n}</b>${done?'Done':cur?'In progress':sc.status==='draft'&&i===0?'To do':'Waiting'}</div>`;}).join('')}</div>`;}
+
+/* ---------- dashboard / reports ---------- */
+async function dashView(title){
+  const all=(await api('GET',`/v1/scorecards?fy=${S.fy}&quarter=${S.quarter}`)).scorecards;
+  const rows=all.filter(s=>s.employee.id!==S.user.id&&(S.tab!=='reports'||s.employee.line_manager));
+  const f=S.filter,q=f.q.toLowerCase();
+  const shown=rows.filter(s=>(!q||s.employee.name.toLowerCase().includes(q))&&(!f.r||s.rating===f.r)&&(!f.s||(f.s==='mine'?s.my_action:s.status===f.s)));
+  const per=10,pages=Math.max(1,Math.ceil(shown.length/per));S.page=Math.min(S.page,pages);
+  const scored=rows.filter(s=>s.manager_total!=null),avg=scored.length?scored.reduce((a,s)=>a+s.manager_total,0)/scored.length:null;
+  const cnt=l=>rows.filter(s=>s.rating===l).length,cfg=await getCfg();
+  const names=cfg.bands.map(b=>b.label).reverse();const shade={'Outstanding':'var(--b1)','Exceeds Expectation':'var(--b2)','Meets Expectation':'var(--b3)','Below Expectation':'#9AA7BA'};
+  const total=scored.length||1;
+  $app.innerHTML=shell(`<div class="grid tiles">
+   <div class="tile"><div class="k">All scorecards</div><div class="v">${rows.filter(s=>s.status!=='draft').length}</div><div class="s">submitted this quarter</div></div>
+   <div class="tile"><div class="k">Waiting for you</div><div class="v" style="color:#9A5200">${rows.filter(s=>s.my_action).length}</div><div class="s">need your action</div></div>
+   <div class="tile"><div class="k">Completed</div><div class="v">${rows.filter(s=>s.status==='ceo_approved').length}</div><div class="s">approved by the CEO</div></div>
+   <div class="tile"><div class="k">Average score</div><div class="v">${avg==null?'–':avg.toFixed(2)}</div><div class="s">out of 5</div></div>
+   <div class="tile" style="grid-column:span 2"><div class="k">Rating spread · ${scored.length} people</div><div class="spread" style="margin-top:8px">${[...cfg.bands].reverse().reverse().map(b=>({l:b.label,n:cnt(b.label)})).filter(x=>x.n).map(x=>`<div style="flex:${x.n};background:${shade[x.l]};${x.l==='Meets Expectation'?'color:var(--brand)':''}">${x.n}</div>`).join('')||'<div style="flex:1;color:var(--muted)">No scores yet</div>'}</div>
+   <div class="legend">${cfg.bands.map(b=>`<span><i style="background:${shade[b.label]}"></i>${esc(b.label)}</span>`).join('')}</div></div></div>
+   <div class="filters"><input class="f" id="fq" placeholder="Search by name" value="${esc(f.q)}"><select class="f" id="fr"><option value="">All ratings</option>${cfg.bands.map(b=>`<option ${f.r===b.label?'selected':''}>${esc(b.label)}</option>`).join('')}</select>
+   <select class="f" id="fs"><option value="">All statuses</option><option value="mine" ${f.s==='mine'?'selected':''}>Waiting for me</option>${ORDER.slice(1).map(s=>`<option value="${s}" ${f.s===s?'selected':''}>${STATUS[s]}</option>`).join('')}</select></div>
+   <div class="card" style="padding:0"><div class="tblwrap"><table><thead><tr><th>Name</th><th>Job title</th><th>Practice</th><th>Self</th><th>Final</th><th>Rating</th><th>Line manager</th><th>Status</th><th></th></tr></thead><tbody>
+   ${shown.slice((S.page-1)*per,S.page*per).map(s=>`<tr class="click ${s.my_action?'mine':''}" data-open="${s.id}"><td><b>${esc(s.employee.name)}</b></td><td>${esc(s.employee.job_title||'')}</td><td>${esc(s.employee.practice||'')}</td><td>${s.self_total==null?'–':s.self_total.toFixed(2)}</td><td>${chip(s)}</td><td><b>${esc(s.rating||'')}</b></td><td>${esc(s.employee.line_manager||'')}</td><td><span class="st"><span class="dot ${s.status==='ceo_approved'?'ok':s.my_action?'':'grey'}"></span>${s.my_action?'Waiting for you':esc(STATUS[s.status])}</span></td><td>›</td></tr>`).join('')||'<tr><td colspan="9" class="muted" style="padding:24px">No scorecards match.</td></tr>'}
+   </tbody></table></div></div>
+   <div class="pager"><span class="muted">Page ${S.page} of ${pages} · ${shown.length} scorecards</span><button class="btn o sm" id="pp" ${S.page<=1?'disabled':''}>Previous</button><button class="btn o sm" id="pn" ${S.page>=pages?'disabled':''}>Next</button></div>`);
+  bindShell();bindOpen();
+  const re=()=>{S.page=1;render();};
+  fq.oninput=e=>{S.filter.q=e.target.value;S.page=1;const p=e.target.selectionStart;render().then(()=>{const n=document.getElementById('fq');n.focus();n.setSelectionRange(p,p);});};
+  fr.onchange=e=>{S.filter.r=e.target.value;re();};fs.onchange=e=>{S.filter.s=e.target.value;re();};
+  pp.onclick=()=>{S.page--;render();};pn.onclick=()=>{S.page++;render();};
+}
+function bindOpen(){document.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>{S.review=el.dataset.open;S.auditAll=false;S.msg=null;render();});}
+
+/* ---------- review page ---------- */
+async function reviewView(){
+  const d=await api('GET','/v1/scorecards/'+S.review),cfg=await getCfg(),sc=d.scorecard,e=sc.employee;
+  const isLM=sc.my_action&&sc.status==='submitted',act=sc.my_action;
+  const step=cfg.flow.find(f=>f.from===sc.status);
+  const mine=e.id===S.user.id;
+  const aud=S.auditAll?d.audit:d.audit.slice(0,5);
+  $app.innerHTML=shell(`<nav style="margin-bottom:12px"><a href="#" id="back" style="font-weight:700">‹ Back to dashboard</a></nav>
+  <div class="card"><div class="row"><div style="flex:1"><h2 style="margin:0;color:var(--brand)">${esc(e.name)}</h2><div class="muted">${esc(e.job_title||'')} · ${esc(e.practice||'')} · Line manager: ${esc(e.line_manager||'–')} · Overall manager: ${esc(e.overall_manager||'–')}</div></div>
+   <span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':act?'':'grey'}"></span>${act?'Waiting for you':esc(STATUS[sc.status])}</span></div>
+   ${journey(sc).replace('padding:0 24px','padding:0')}
+   <div class="grid tiles" style="margin:0"><div class="tile"><div class="k">Self score</div><div class="v">${sc.self_total==null?'–':sc.self_total.toFixed(2)}</div></div><div class="tile"><div class="k">Manager score</div><div class="v">${sc.manager_total==null?'Pending':sc.manager_total.toFixed(2)}</div><div class="s">${esc(sc.rating||'')}</div></div><div class="tile"><div class="k">Proof of work</div><div class="s">${sc.proof_of_work_url?`<a href="${esc(sc.proof_of_work_url)}" target="_blank" rel="noopener">Open link</a>`:'None'}</div>${(sc.evidence_links||[]).map(x=>`<div class="s"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.source)}</a></div>`).join('')}</div></div></div>
+  <div class="card" style="margin-top:16px;padding:24px 0"><h3 style="margin:0 24px 8px">Scorecard</h3><div class="tblwrap"><table><thead><tr><th>#</th><th>KPI category</th><th>Weight</th><th>KPI</th><th>In category</th><th>Self</th><th>Manager</th></tr></thead><tbody>
+   ${d.kpis.map((k,i)=>`<tr><td>${i+1}</td><td>${esc(k.category)}</td><td>${k.category_weight}%</td><td>${esc(k.kpi)}</td><td>${k.weight_in_category}%</td><td>${k.self_score??'–'}</td><td>${isLM?`<input class="f num" type="number" min="1" max="5" step="1" data-k="${k.id}" value="${k.manager_score??''}">`:(k.manager_score??'–')}</td></tr>`).join('')}</tbody></table></div>
+   ${act&&!mine?`<div style="padding:16px 24px 0;border-top:1px solid var(--row)"><div class="row">${isLM?'<button class="btn o" id="svm">Save scores</button>':''}<button class="btn" id="ap">${isLM?'Send to overall manager':'Approve: '+esc(step.label)}</button></div>
+   <label class="l" for="rr" style="margin-top:16px">Return to previous step (give a reason)</label><div class="row"><input id="rr" class="f" style="flex:1" placeholder="Why is it being returned?"><button class="btn o" id="rt">Return</button></div></div>`:''}</div>
+  <div class="split" style="margin-top:16px"><section class="card"><h3 style="margin-top:0">Audit trail</h3>${aud.map(a=>`<div style="padding:8px 0;border-top:1px solid var(--row)"><b>${esc(auditText(a))}</b><div class="muted" style="font-size:13px">${esc(a.actor)} · ${fmtTime(a.created_at)}</div></div>`).join('')||'<div class="muted">Nothing yet.</div>'}${!S.auditAll&&d.audit.length>5?'<button class="btn o sm" id="more" style="margin-top:8px">Load more</button>':''}</section>
+  ${commentsBlock(d,true)}</div>`);
+  bindShell();bindComments(sc.id);
+  document.getElementById('back').onclick=ev=>{ev.preventDefault();S.review=null;render();};
+  const more=document.getElementById('more');if(more)more.onclick=()=>{S.auditAll=true;render();};
+  const run=async fn=>{try{await fn();}catch(x){flash('err',x.message);}};
+  const sv=async()=>api('PUT',`/v1/scorecards/${sc.id}/manager-scores`,{scores:[...document.querySelectorAll('[data-k]')].map(i=>({id:i.dataset.k,manager_score:i.value}))});
+  if(document.getElementById('svm'))svm.onclick=()=>run(async()=>{await sv();flash('ok','Scores saved.',true);});
+  if(document.getElementById('ap'))ap.onclick=()=>run(async()=>{if(isLM)await sv();await api('POST',`/v1/scorecards/${sc.id}/approve`);S.review=null;flash('ok','Done. It has moved to the next step.');});
+  if(document.getElementById('rt'))rt.onclick=()=>run(async()=>{await api('POST',`/v1/scorecards/${sc.id}/return`,{reason:rr.value});S.review=null;flash('ok','Returned with your reason.');});
+}
+const auditText=a=>({scorecard_created:'Scorecard created',draft_saved:'Draft saved',submitted:'Submitted scorecard',manager_scores_saved:'Manager scores saved',approved:'Approved: '+(a.detail.label||''),returned:'Returned: '+(a.detail.reason||''),commented:'Added a comment',evidence_added:'Evidence added',login:'Signed in'}[a.action]||a.action);
+function commentsBlock(d,inner){const cs=d.comments;
+  return `<section class="card" ${inner?'':'style="margin-top:28px"'}><h3 style="margin:0 0 4px">Comments</h3>${cs.map(c=>`<div class="cm"><small><b style="color:var(--ink)">${esc(c.author)}</b> · ${fmtDate(c.created_at)}</small><div>${esc(c.body)}</div></div>`).join('')||'<div class="muted">No comments yet.</div>'}
+  <div class="row" style="margin-top:12px"><input class="f" id="cmt" style="flex:1" placeholder="Add a comment"><button class="btn" id="cpost">Post</button></div></section>`;}
+function bindComments(id){const b=document.getElementById('cpost');if(!b)return;b.onclick=async()=>{try{await api('POST',`/v1/scorecards/${id}/comments`,{body:document.getElementById('cmt').value});render();}catch(e){flash('err',e.message);}};}
+
+/* ---------- goals ---------- */
+async function goalsView(){
+  const goals=(await api('GET','/v1/goals?fy='+S.fy)).goals,u=S.user;
+  const level={ceo:'company',overall_manager:'practice',cos:'practice',line_manager:'team'}[u.role];
+  const co=goals.filter(g=>g.level==='company'),pr=goals.filter(g=>g.level==='practice'),tm=goals.filter(g=>g.level==='team');
+  const parents=level==='practice'?co:level==='team'?pr.filter(g=>!u.practice||g.practice===u.practice):[];
+  $app.innerHTML=shell(`<div class="split"><section class="card"><h2 style="margin-top:0">Goal cascade FY${S.fy}</h2>
+   ${co.map(c=>`<div class="goal"><span class="tag">COMPANY</span><b>${esc(c.title)}</b>${c.target?` <small>Target: ${esc(c.target)}</small>`:''}
+    <div class="cascade">${pr.filter(p=>p.parent_id===c.id).map(p=>`<div class="goal"><span class="tag">${esc((p.practice||'PRACTICE').toUpperCase())}</span>${esc(p.title)}
+     <div class="cascade">${tm.filter(t=>t.parent_id===p.id).map(t=>`<div class="goal"><span class="tag">TEAM</span>${esc(t.title)} <small>${esc(t.owner||'')}</small></div>`).join('')}</div></div>`).join('')}</div></div>`).join('')||'<p class="muted">No company goals yet.</p>'}
+   ${pr.filter(p=>!p.parent_id).concat(tm.filter(t=>!t.parent_id)).map(g=>`<div class="goal"><span class="tag">${esc(g.level.toUpperCase())}</span>${esc(g.title)}</div>`).join('')}</section>
+  ${level?`<section class="card"><h2 style="margin-top:0">Add ${level} goal</h2><div id="gm"></div>
+   ${level==='practice'?`<label class="l" for="gp">Practice</label><input id="gp" class="f" value="${esc(u.practice||'')}">`:''}
+   ${level!=='company'?`<label class="l" for="gpar" style="margin-top:12px">Linked to ${level==='practice'?'company':'practice'} goal</label><select id="gpar" class="f"><option value="">Choose…</option>${parents.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}</select>`:''}
+   <label class="l" for="gt" style="margin-top:12px">Goal</label><textarea id="gt" class="f"></textarea>
+   ${level==='company'?'<label class="l" for="gms" style="margin-top:12px">Success measure</label><input id="gms" class="f"><label class="l" for="gtg" style="margin-top:12px">Target</label><input id="gtg" class="f">':''}
+   <button class="btn" id="gs" style="margin-top:16px">Save goal</button></section>`:'<section class="card"><p class="muted">Goals are set by the CEO (company), overall managers and the Chief of Staff (practice), and line managers (team).</p></section>'}</div>`);
+  bindShell();
+  const gs=document.getElementById('gs');if(gs)gs.onclick=async()=>{try{await api('POST','/v1/goals',{level,fy:S.fy,title:gt.value,practice:document.getElementById('gp')?.value,parent_id:document.getElementById('gpar')?.value||null,measure:document.getElementById('gms')?.value,target:document.getElementById('gtg')?.value});flash('ok','Goal saved.');}catch(e){document.getElementById('gm').innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}};
+}
+
+
+/* ---------- people (admin) ---------- */
+const csvParse=t=>{const rows=[];let r=[],f='',q=false;t=t.replace(/^﻿/,'');
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else if(c==='"')q=true;else if(c===','){r.push(f);f='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;r.push(f);f='';if(r.some(x=>x.trim()))rows.push(r);r=[];}
+    else f+=c;}
+  r.push(f);if(r.some(x=>x.trim()))rows.push(r);return rows;};
+const COLS=['name','email','job_title','practice','role','line_manager_email','overall_manager_email','active'];
+const ROLEKEY=Object.fromEntries(Object.entries(ROLE).flatMap(([k,v])=>[[k,k],[v.toLowerCase(),k]]));
+function csvToPeople(text){
+  const rows=csvParse(text);if(rows.length<2)throw new Error('The file has no data rows.');
+  const head=rows[0].map(h=>h.trim().toLowerCase().replace(/[\s-]+/g,'_'));
+  for(const need of ['name','email','role'])if(!head.includes(need))throw new Error('The first row must include a "'+need+'" column.');
+  return rows.slice(1).map(r=>{const o={};head.forEach((h,i)=>{if(COLS.includes(h))o[h]=(r[i]||'').trim();});
+    o.role=ROLEKEY[(o.role||'').toLowerCase()]||o.role;if('active' in o&&o.active==='')delete o.active;return o;});
+}
+const download=(name,text)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+const csvCell=v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+function credBox(list,title){
+  return `<div class="cred"><b>${esc(title)}</b><div class="muted" style="margin:4px 0 10px">Shown once. Send each person their temporary password privately. They must choose a new one at first sign-in.</div>
+  <table style="min-width:0"><tbody>${list.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.email)}</td><td><code>${esc(c.temp_password)}</code></td></tr>`).join('')}</tbody></table>
+  <div style="margin-top:12px"><button class="btn o sm" id="dlc">Download as CSV</button></div></div>`;
+}
+async function peopleView(){
+  const people=(await api('GET','/v1/people')).people;
+  const emails=people.filter(p=>p.active).map(p=>p.email);
+  const mgrOpts=sel=>'<option value="">None</option>'+emails.map(e=>`<option ${e===sel?'selected':''}>${esc(e)}</option>`).join('');
+  const fq=(S.pf||'').toLowerCase();
+  const shown=people.filter(p=>!fq||(p.name+p.email+(p.practice||'')+(p.job_title||'')).toLowerCase().includes(fq));
+  const ed=S.edit||{};
+  $app.innerHTML=shell(`<div id="pbox">${S.creds?credBox(S.creds.list,S.creds.title):''}</div>
+  <div class="pp">
+   <section class="card"><h2 style="margin-top:0">${ed.email?'Edit person':'Add a person'}</h2><div id="pm"></div>
+    <div class="g2"><div><label class="l" for="pn">Name</label><input id="pn" class="f" value="${esc(ed.name||'')}"></div>
+    <div><label class="l" for="pe">Email</label><input id="pe" class="f" type="email" value="${esc(ed.email||'')}" ${ed.email?'readonly':''}></div>
+    <div><label class="l" for="pj">Job title</label><input id="pj" class="f" value="${esc(ed.job_title||'')}"></div>
+    <div><label class="l" for="pp">Practice area</label><input id="pp" class="f" value="${esc(ed.practice||'')}"></div></div>
+    <label class="l" for="pr">Role</label><select id="pr" class="f">${Object.entries(ROLE).map(([k,v])=>`<option value="${k}" ${k===(ed.role||'employee')?'selected':''}>${esc(v)}</option>`).join('')}</select>
+    <div class="g2"><div><label class="l" for="pl">Line manager</label><select id="pl" class="f">${mgrOpts(ed.line_manager_email)}</select></div>
+    <div><label class="l" for="po">Overall manager</label><select id="po" class="f">${mgrOpts(ed.overall_manager_email)}</select></div></div>
+    <div class="row" style="margin-top:16px"><button class="btn" id="psave">${ed.email?'Save changes':'Add person'}</button>${ed.email?'<button class="btn o" id="pcancel">Cancel</button>':''}</div>
+    ${ed.email?'':'<p class="muted" style="margin-bottom:0">A temporary password is created for new people. Employees need both managers so their scorecard can be reviewed.</p>'}</section>
+   <section class="card"><h2 style="margin-top:0">Import from CSV</h2><div id="cm"></div>
+    <p class="muted" style="margin-top:0">Columns: <b>name, email, role</b> are required. Optional: job_title, practice, line_manager_email, overall_manager_email, active. Roles: employee, line_manager, overall_manager, calibration, cos, ceo. Existing emails are updated.</p>
+    <button class="btn o sm" id="tpl">Download template</button>
+    <label class="l" for="csvf" style="margin-top:16px">Choose a CSV file</label><input id="csvf" class="f" type="file" accept=".csv,text/csv" style="padding:8px 10px">
+    <div id="cprev" class="muted" style="margin:12px 0"></div>
+    <button class="btn" id="cimp" disabled>Import</button></section>
+  </div>
+  <section class="card" style="padding:0"><div class="row" style="padding:20px 24px 12px"><h2 style="margin:0;flex:1">People (${people.length})</h2><input id="pfind" class="f" style="max-width:260px" placeholder="Search" value="${esc(S.pf||'')}"></div>
+   <div class="tblwrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Practice</th><th>Line manager</th><th>Overall manager</th><th></th></tr></thead><tbody>
+   ${shown.map(p=>`<tr class="${p.active?'':'inact'}"><td><b>${esc(p.name)}</b><br><small class="muted">${esc(p.job_title||'')}</small></td><td>${esc(p.email)}</td><td>${esc(ROLE[p.role])}${p.active?'':' (inactive)'}</td><td>${esc(p.practice||'')}</td><td>${esc(p.line_manager_email||'–')}</td><td>${esc(p.overall_manager_email||'–')}</td>
+   <td style="white-space:nowrap"><button class="btn o sm" data-ed="${p.id}">Edit</button> <button class="btn o sm" data-rp="${p.id}">Reset password</button> ${p.id===S.user.id?'':`<button class="btn o sm" data-ac="${p.id}">${p.active?'Deactivate':'Reactivate'}</button>`}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">No one found.</td></tr>'}
+   </tbody></table></div></section>`);
+  bindShell();
+  const byId=id=>people.find(p=>p.id===id);
+  const showCreds=(list,title)=>{S.creds={list,title};};
+  const dl=()=>{const b=document.getElementById('dlc');if(b)b.onclick=()=>download('temporary-passwords.csv','name,email,temp_password\n'+S.creds.list.map(c=>[c.name,c.email,c.temp_password].map(csvCell).join(',')).join('\n'));};dl();
+  psave.onclick=async()=>{const person={name:pn.value,email:pe.value,job_title:pj.value,practice:pp.value,role:pr.value,line_manager_email:pl.value,overall_manager_email:po.value};
+    try{const r=await api('POST','/v1/people/import',{people:[person]});S.edit=null;
+      if(r.credentials.length){showCreds(r.credentials,'Account created');flash('ok',person.name+' was added.');}else{S.creds=null;flash('ok','Changes saved.');}
+    }catch(e){document.getElementById('pm').innerHTML=`<div class="msg err">${esc(e.message)}${(e.errors||[]).length?`<ul class="errl">${e.errors.map(x=>`<li>${esc(x.error)}</li>`).join('')}</ul>`:''}</div>`;}};
+  if(document.getElementById('pcancel'))pcancel.onclick=()=>{S.edit=null;render();};
+  document.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{S.edit=byId(b.dataset.ed);render();window.scrollTo(0,0);});
+  document.querySelectorAll('[data-rp]').forEach(b=>b.onclick=async()=>{const p=byId(b.dataset.rp);if(!confirm('Reset the password for '+p.name+'? Their current password will stop working.'))return;
+    try{const r=await api('POST',`/v1/people/${p.id}/reset-password`);showCreds([{name:r.name,email:r.email,temp_password:r.temp_password}],'Password reset');render();window.scrollTo(0,0);}catch(e){flash('err',e.message);}});
+  document.querySelectorAll('[data-ac]').forEach(b=>b.onclick=async()=>{const p=byId(b.dataset.ac);
+    try{await api('PATCH','/v1/people/'+p.id,{active:!p.active});flash('ok',p.name+(p.active?' was deactivated. They can no longer sign in.':' was reactivated.'));}catch(e){flash('err',e.message);}});
+  pfind.oninput=()=>{S.pf=pfind.value;const pos=pfind.selectionStart;render().then(()=>{const f=document.getElementById('pfind');if(f){f.focus();f.setSelectionRange(pos,pos);}});};
+  tpl.onclick=()=>download('strata-people-template.csv',COLS.join(',')+'\nAda Obi,ada@strata.ng,Analyst,Advisory,employee,precious@strata.ng,abdulmatin@strata.ng,\n');
+  let parsed=null;
+  csvf.onchange=async()=>{parsed=null;cimp.disabled=true;cm.innerHTML='';const f=csvf.files[0];if(!f)return;
+    try{parsed=csvToPeople(await f.text());if(parsed.length>1000)throw new Error('Maximum 1000 rows per file.');
+      const known=new Set(people.map(p=>p.email.toLowerCase())),n=parsed.filter(p=>!known.has((p.email||'').toLowerCase())).length;
+      cprev.textContent=`${parsed.length} rows found: ${n} new, ${parsed.length-n} to update.`;cimp.disabled=false;
+    }catch(e){parsed=null;cprev.textContent='';cm.innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}};
+  cimp.onclick=async()=>{if(!parsed)return;cimp.disabled=true;
+    try{const r=await api('POST','/v1/people/import',{people:parsed});S.creds=r.credentials.length?{list:r.credentials,title:`${r.created} new account${r.created===1?'':'s'} created`}:null;flash('ok',`Done. ${r.created} added, ${r.updated} updated.`);}
+    catch(e){cimp.disabled=false;cm.innerHTML=`<div class="msg err">${esc(e.message)}<ul class="errl">${(e.errors||[]).slice(0,15).map(x=>`<li>Row ${x.row} (${esc(x.email)}): ${esc(x.error)}</li>`).join('')}${(e.errors||[]).length>15?`<li>…and ${e.errors.length-15} more</li>`:''}</ul></div>`;}};
+}
+
+/* ---------- plumbing ---------- */
+let CFG;async function getCfg(){return CFG||(CFG=await api('GET','/v1/scorecards/config'));}
+function flash(t,m,stay){S.msg={t,m};if(stay){const el=document.querySelector('main');if(el){const old=el.querySelector('.msg');if(old)old.remove();el.insertAdjacentHTML('afterbegin',`<div class="msg ${t}">${esc(m)}</div>`);return;}}render();}
+async function render(){
+  try{
+    if(!S.token){loginView();return;}
+    if(!S.user){const j=await api('GET','/v1/auth/me');S.user=j.user;S.tab=S.tab||TABS[S.user.role][0];}
+    if(S.user.must_change_password){changePwView();return;}
+    if(S.review)await reviewView();
+    else if(S.tab==='mine')await mineView();
+    else if(S.tab==='goals')await goalsView();
+    else if(S.tab==='people'&&S.user.is_admin)await peopleView();
+    else await dashView();
+    S.msg=null;
+  }catch(e){if(!S.token){loginView();return;}$app.innerHTML=S.user?shell(`<div class="msg err">${esc(e.message)}</div>`):`<div class="login"><div class="msg err">${esc(e.message)}</div></div>`;if(S.user)bindShell();}
+}
+render();
+</script>
+</body>
+</html>
