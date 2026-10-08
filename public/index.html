@@ -86,6 +86,12 @@ tr.mine td{background:#FFFCEB}
 .cred code{font-family:ui-monospace,Menlo,monospace;background:#fff;padding:2px 8px;border-radius:6px;border:1px solid var(--border)}
 .errl{margin:8px 0 0;padding-left:18px;color:var(--bad);font-size:13px}
 .inact{opacity:.55}
+.step .who{display:block;font-weight:400;color:var(--ink2);min-height:20px}
+tr.subrow td{background:#F8FBFD}tr.subrow td:first-child{color:var(--muted)}
+.subtag{display:flex;align-items:center;gap:6px;padding-left:14px}.subtag .f{flex:1}
+.derived{display:inline-block;min-width:48px;padding:6px 8px;border-radius:6px;background:var(--tint2);font-weight:700;text-align:center}
+.gbtn{margin-left:8px;vertical-align:middle}
+table.sc{min-width:1000px}.sc td:nth-child(2){min-width:210px}.sc td:nth-child(4){min-width:230px}
 </style>
 </head>
 <body>
@@ -123,14 +129,14 @@ function shell(inner){
   return `<header class="top"><div class="wrap">
   <div class="hrow"><div class="logo">${LOGO}<span class="hd">Strata</span></div>
   <div class="welcome"><div><h1>Welcome, ${esc(u.name.split(' ')[0])}</h1><div class="d">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
-  <dl><div><dt>Job title</dt><dd>${esc(u.job_title||'')}</dd></div><div><dt>Email</dt><dd>${esc(u.email)}</dd></div><div><dt>Practice area</dt><dd>${esc(u.practice||'')}</dd></div><div><dt>Role</dt><dd>${esc(ROLE[u.role])}</dd></div></dl></div>
+  <dl><div><dt>Job title</dt><dd>${esc(u.job_title||'')}</dd></div><div><dt>Email</dt><dd>${esc(u.email)}</dd></div><div><dt>Line manager</dt><dd>${esc(u.line_manager||'–')}</dd></div><div><dt>Practice area</dt><dd>${esc(u.practice||'')}</dd></div></dl></div>
   <div style="text-align:right"><div style="color:var(--ink2)">Performance Management System</div><span class="pill">${esc(ROLE[u.role])}</span> <button class="btn o sm" data-act="logout">Sign out</button></div></div>
   <div class="tabrow"><div class="tabs" role="tablist">${tabs.map(t=>`<button class="tab" role="tab" aria-selected="${S.tab===t&&!S.review}" data-tab="${t}">${TABNAME[t]}</button>`).join('')}</div>
   <div class="row"><label class="l" style="margin:0" for="fy">Quarter</label><select id="fy" class="f" style="width:150px"><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select><span class="muted">FY${S.fy}</span></div></div>
   </div></header><main class="wrap">${S.msg?`<div class="msg ${S.msg.t}">${esc(S.msg.m)}</div>`:''}${inner}</main>`;
 }
 function bindShell(){
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.review=null;S.page=1;S.msg=null;S.creds=null;S.edit=null;render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.review=null;S.page=1;S.msg=null;S.creds=null;S.edit=null;S.gedit=null;render();});
   const q=document.getElementById('fy');if(q){q.value=S.quarter;q.onchange=()=>{S.quarter=q.value;S.review=null;S.draft=null;S.page=1;render();};}
   const lo=document.querySelector('[data-act=logout]');if(lo)lo.onclick=logout;
 }
@@ -158,10 +164,21 @@ function changePwView(){
 }
 
 /* ---------- my scorecard ---------- */
-const calc=(rows,f)=>{if(rows.some(r=>r[f]===''||r[f]==null))return null;const c={};rows.forEach(r=>{c[r.category]=c[r.category]||{w:+r.category_weight,s:0};c[r.category].s+=(+r.weight_in_category*+r[f])/100;});return Math.round(Object.values(c).reduce((a,x)=>a+x.w*x.s/100,0)*100)/100;};
-function weightMsgs(rows){const m=[],c={};rows.forEach(r=>{c[r.category]=c[r.category]||{w:+r.category_weight,t:0};c[r.category].t+=+r.weight_in_category;});
+const STD_CATS=['Core role delivery','Strategic / cross-functional','People, culture & values','Capability & development'];
+const uid=()=>Math.random().toString(36).slice(2,10);
+const hydrate=rows=>{const r=rows.map(k=>({...k,uid:uid()}));r.forEach(k=>{k.puid=k.parent_position==null?null:(r[k.parent_position]||{}).uid||null;});return r;};
+const kidsOf=(rows,r)=>rows.filter(x=>x.puid===r.uid);
+/* score of a main KPI: its own score, or the weighted score of its sub-KPIs */
+function effScore(rows,r,f){const ks=kidsOf(rows,r);if(!ks.length)return r[f]===''||r[f]==null?null:+r[f];
+  let s=0;for(const k of ks){if(k[f]===''||k[f]==null)return null;s+=(+k.weight_in_category*+k[f])/100;}return s;}
+const calc=(rows,f)=>{const mains=rows.filter(r=>!r.puid);if(!mains.length)return null;const c={};
+  for(const r of mains){const s=effScore(rows,r,f);if(s==null)return null;c[r.category]=c[r.category]||{w:+r.category_weight,s:0};c[r.category].s+=(+r.weight_in_category*s)/100;}
+  return Math.round(Object.values(c).reduce((a,x)=>a+x.w*x.s/100,0)*100)/100;};
+function weightMsgs(rows){const m=[],c={};rows.filter(r=>!r.puid).forEach(r=>{c[r.category]=c[r.category]||{w:+r.category_weight,t:0};c[r.category].t+=+r.weight_in_category;});
   const tw=Object.values(c).reduce((a,x)=>a+x.w,0);if(Math.abs(tw-100)>.001)m.push(`Category weights total ${tw}%, they must total 100%.`);
-  for(const[n,x]of Object.entries(c))if(Math.abs(x.t-100)>.001)m.push(`KPI weights in "${n}" total ${x.t}%, they must total 100%.`);return m;}
+  for(const[n,x]of Object.entries(c))if(Math.abs(x.t-100)>.001)m.push(`KPI weights in "${n}" total ${x.t}%, they must total 100%.`);
+  rows.filter(r=>!r.puid).forEach(r=>{const ks=kidsOf(rows,r);if(!ks.length)return;const t=ks.reduce((a,k)=>a+ +k.weight_in_category,0);
+    if(Math.abs(t-100)>.001)m.push(`Sub-KPIs under "${r.kpi||'this KPI'}" total ${t}%, they must total 100%.`);});return m;}
 const bandFor=(s,cfg)=>s==null?null:cfg.bands.find(b=>s>=b.min).label;
 
 async function mineView(){
@@ -173,10 +190,13 @@ async function mineView(){
   const d=await api('GET','/v1/scorecards/'+mine.id);
   const cfg=await getCfg(),goals=(await api('GET','/v1/goals?fy='+S.fy)).goals;
   const sc=d.scorecard,editable=sc.status==='draft';
-  if(!S.draft||S.draft.id!==sc.id)S.draft={id:sc.id,rows:d.kpis.map(k=>({...k})),url:sc.proof_of_work_url||''};
+  if(!S.draft||S.draft.id!==sc.id||!editable)S.draft={id:sc.id,rows:hydrate(d.kpis),url:sc.proof_of_work_url||''};
   const T=S.draft;
-  const goalList=l=>goals.filter(g=>g.level===l).map((g,i)=>`<div class="goal">${i+1}. ${esc(g.title)}${g.practice&&l!=='company'?` <small>(${esc(g.practice)})</small>`:''}</div>`).join('')||'<div class="goal muted">None set yet</div>';
-  const cats=[...new Set(T.rows.map(r=>r.category))].map(c=>({n:c,w:T.rows.find(r=>r.category===c).category_weight}));
+  const me=S.user,lc=x=>String(x||'').toLowerCase();
+  const visible={company:g=>true,practice:g=>!me.practice||lc(g.practice)===lc(me.practice),team:g=>g.owner_id===me.line_manager_id||g.owner_id===me.id};
+  const empty={company:'None set yet',practice:'None set yet',team:me.line_manager?`${esc(me.line_manager)} has not set a team goal yet`:'None set yet'};
+  const goalList=l=>goals.filter(g=>g.level===l&&visible[l](g)).map((g,i)=>`<div class="goal">${i+1}. ${esc(g.title)}${g.practice&&l!=='company'?` <small>(${esc(g.practice)})</small>`:''}</div>`).join('')||`<div class="goal muted">${empty[l]}</div>`;
+  const cats=[...new Set(T.rows.filter(r=>!r.puid).map(r=>r.category))].map(c=>({n:c,w:T.rows.find(r=>r.category===c).category_weight}));
   $app.innerHTML=shell(`<div class="split"><aside class="card"><h2 style="margin:0 0 16px;font-size:20px;color:var(--brand)">Goal alignment <small class="muted" style="font-weight:400">FY${S.fy}</small></h2>
     <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em">COMPANY GOALS</div>${goalList('company')}
     <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em;margin-top:12px">PRACTICE GOALS</div>${goalList('practice')}
@@ -184,34 +204,51 @@ async function mineView(){
     <div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.06em;margin-top:12px">MY KPI CATEGORIES</div>${cats.map(c=>`<div class="row" style="justify-content:space-between;background:var(--bg);border-radius:6px;padding:8px 12px;margin-top:6px"><span>${esc(c.n)}</span><b>${c.w}%</b></div>`).join('')}</aside>
   <section class="card" style="padding:24px 0"><div style="padding:0 24px" class="row"><h2 style="margin:0;font-size:22px;color:var(--brand);flex:1">Performance Evaluation</h2>
     <div style="flex:0 1 420px;min-width:240px"><label class="l" for="pow">Proof of work (Notion link)</label><input id="pow" class="f" type="url" placeholder="https://www.notion.so/..." value="${esc(T.url)}" ${editable?'':'readonly'}></div></div>
-    ${journey(sc)}<div class="tblwrap" style="margin-top:8px"><table class="sc"><thead><tr><th>#</th><th>KPI category</th><th>Weight %</th><th>KPI</th><th>Weight in category %</th><th>Self score</th><th>Manager</th>${editable?'<th></th>':''}</tr></thead><tbody id="kb">${T.rows.map((r,i)=>kpiRow(r,i,editable)).join('')}</tbody></table></div>
+    ${journey(sc,cfg)}<div class="tblwrap" style="margin-top:8px"><table class="sc"><thead><tr><th>#</th><th>KPI category</th><th>Weight %</th><th>KPI</th><th>Weight in category %</th><th>Self score</th><th>Manager</th>${editable?'<th></th>':''}</tr></thead><tbody id="kb">${kpiRows(T.rows,editable)}</tbody></table></div>
     <div id="wm"></div>
-    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'<button class="btn o sm" id="addk">+ Add KPI</button>':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
+    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'<button class="btn o sm" id="addk">+ Add KPI</button><span class="muted" style="font-size:13px">Use “+ Sub” on a KPI to break it into sub-KPIs. They share that KPI’s weight.</span>':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
     <div style="margin:16px 24px 0;padding-top:16px;border-top:1px solid var(--row)" class="row"><span id="vs" style="font-weight:700"></span><span style="font-size:18px">Calculated score <strong id="tot" style="font-size:32px;color:var(--brand)"></strong> / 5</span><span id="rt"></span>${sc.manager_total!=null?`<span>Manager score <span class="chip ${ratingClass(sc.rating)}">${sc.manager_total.toFixed(2)}</span> ${esc(sc.rating||'')}</span>`:''}</div>
     ${sc.status!=='draft'?`<div style="padding:0 24px"><button class="btn o sm" style="margin-top:12px" data-open="${sc.id}">Open review page</button></div>`:''}</section></div>${commentsBlock(d)}`);
   bindShell();
   const upd=()=>{const t=calc(T.rows,'self_score'),m=weightMsgs(T.rows);document.getElementById('tot').textContent=t==null?'–':t.toFixed(2);
     document.getElementById('rt').innerHTML=t==null?'':`<span class="chip ${ratingClass(bandFor(t,cfg))}">${esc(bandFor(t,cfg))}</span>`;
     document.getElementById('vs').innerHTML=m.length?'<span style="color:var(--bad)">Weights need fixing</span>':'<span style="color:var(--ok)">Total weight 100% (valid)</span>';
+    document.querySelectorAll('[data-dself]').forEach(el=>{const r=T.rows.find(x=>x.uid===el.dataset.dself),v=r&&effScore(T.rows,r,'self_score');el.textContent=v==null?'–':v.toFixed(2);});
     document.getElementById('wm').innerHTML=m.length?`<div class="msg err" style="margin:12px 24px 0">${m.map(esc).join('<br>')}</div>`:'';};
   upd();
   if(editable){
     document.getElementById('pow').oninput=e=>T.url=e.target.value;
-    document.getElementById('kb').oninput=e=>{const i=+e.target.dataset.i,f=e.target.dataset.f;if(f==null)return;T.rows[i][f]=e.target.value;upd();};
-    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{T.rows.splice(+b.dataset.del,1);render();});
-    document.getElementById('addk').onclick=()=>{const l=T.rows[T.rows.length-1]||{category:'New category',category_weight:0};T.rows.push({category:l.category,category_weight:l.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});render();};
-    const payload=()=>({kpis:T.rows.map(r=>({category:r.category,category_weight:r.category_weight,kpi:r.kpi,weight_in_category:r.weight_in_category,self_score:r.self_score})),proof_of_work_url:T.url||null});
+    document.getElementById('kb').oninput=e=>{const i=+e.target.dataset.i,f=e.target.dataset.f;if(f==null)return;const r=T.rows[i];
+      if(f==='category'){r.category=e.target.value;const peer=T.rows.find(x=>!x.puid&&x!==r&&x.category===r.category);if(peer)r.category_weight=peer.category_weight;
+        kidsOf(T.rows,r).forEach(k=>{k.category=r.category;k.category_weight=r.category_weight;});render();return;}
+      r[f]=e.target.value;
+      if(f==='category_weight'&&!r.puid)T.rows.forEach((x,j)=>{if(x!==r&&x.category===r.category){x.category_weight=r.category_weight;const el=document.querySelector(`[data-i="${j}"][data-f="category_weight"]`);if(el)el.value=r.category_weight;}});
+      upd();};
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const r=T.rows[+b.dataset.del];T.rows=T.rows.filter(x=>x!==r&&x.puid!==r.uid);render();});
+    document.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{const i=+b.dataset.sub,p=T.rows[i];let j=i+1;while(j<T.rows.length&&T.rows[j].puid===p.uid)j++;
+      const first=!kidsOf(T.rows,p).length;p.self_score='';
+      T.rows.splice(j,0,{uid:uid(),puid:p.uid,category:p.category,category_weight:p.category_weight,sub_category:'',kpi:'',weight_in_category:first?100:0,self_score:'',manager_score:null});render();});
+    document.getElementById('addk').onclick=()=>{const l=[...T.rows].reverse().find(x=>!x.puid)||{category:STD_CATS[0],category_weight:0};T.rows.push({uid:uid(),puid:null,category:l.category,category_weight:l.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});render();};
+    const payload=()=>({kpis:T.rows.map(r=>({parent_position:r.puid?T.rows.findIndex(x=>x.uid===r.puid):null,sub_category:r.puid?r.sub_category||'':null,category:r.category,category_weight:r.category_weight,kpi:r.kpi,weight_in_category:r.weight_in_category,self_score:kidsOf(T.rows,r).length?'':r.self_score})),proof_of_work_url:T.url||null});
     document.getElementById('save').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());flash('ok','Draft saved.');}catch(e){flash('err',e.message);}};
     document.getElementById('sub').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());await api('POST',`/v1/scorecards/${sc.id}/submit`);S.draft=null;flash('ok','Submitted to your line manager.');}catch(e){flash('err',e.message);}};
   }
   bindComments(sc.id);bindOpen();
 }
-function kpiRow(r,i,ed){const a=ed?'':'readonly';const inp=(f,v,c='')=>`<input class="f ${c}" data-i="${i}" data-f="${f}" value="${esc(v==null?'':v)}" ${a}>`;
-  const first=i===0||false;
-  return `<tr><td>${i+1}</td><td>${inp('category',r.category)}</td><td>${inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi)}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}</td><td>${ed?`<input class="f num" type="number" min="1" max="5" step="1" data-i="${i}" data-f="self_score" value="${esc(r.self_score==null?'':r.self_score)}">`:esc(r.self_score)}</td><td style="font-weight:700">${r.manager_score==null?'–':r.manager_score}</td>${ed?`<td><button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
-function journey(sc){const idx=ORDER.indexOf(sc.status);let curDone=false;
+function kpiRows(rows,ed){let n=0,m=0;return rows.map((r,i)=>{if(!r.puid){n++;m=0;}else m++;return kpiRow(r,i,ed,rows,r.puid?`${n}.${m}`:String(n));}).join('');}
+function kpiRow(r,i,ed,rows,label){const a=ed?'':'readonly';const sub=!!r.puid,hasKids=!sub&&rows.some(x=>x.puid===r.uid);
+  const inp=(f,v,c='',ph='')=>`<input class="f ${c}" data-i="${i}" data-f="${f}" value="${esc(v==null?'':v)}" placeholder="${esc(ph)}" ${a}>`;
+  const cats=STD_CATS.includes(r.category)?STD_CATS:STD_CATS.concat(r.category?[r.category]:[]);
+  const f2=v=>v==null?'–':v.toFixed(2);
+  const catCell=sub?`<div class="subtag">↳ ${inp('sub_category',r.sub_category,'','Sub category')}</div>`
+    :ed?`<select class="f" data-i="${i}" data-f="category" aria-label="KPI category">${cats.map(c=>`<option ${c===r.category?'selected':''}>${esc(c)}</option>`).join('')}</select>`:esc(r.category);
+  const self=hasKids?`<span class="derived" data-dself="${r.uid}">${f2(effScore(rows,r,'self_score'))}</span>`
+    :ed?`<input class="f num" type="number" min="1" max="5" step="1" data-i="${i}" data-f="self_score" value="${esc(r.self_score==null?'':r.self_score)}">`:esc(r.self_score==null?'–':r.self_score);
+  const mg=hasKids?f2(effScore(rows,r,'manager_score')):(r.manager_score==null?'–':r.manager_score);
+  return `<tr class="${sub?'subrow':''}"><td>${label}</td><td>${catCell}</td><td>${sub?'<span class="muted">–</span>':inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi,'',sub?'Sub-KPI':'')}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}${sub?'<br><small class="muted">% of main KPI</small>':''}</td><td>${self}</td><td style="font-weight:700">${mg}</td>${ed?`<td style="white-space:nowrap">${sub?'':`<button class="btn o sm" data-sub="${i}">+ Sub</button> `}<button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
+function journey(sc,cfg){const idx=ORDER.indexOf(sc.status);let curDone=false;const e=sc.employee||{},ro=(cfg&&cfg.roles)||{};const who=[e.name,e.line_manager,e.overall_manager,ro.calibration,ro.cos,ro.ceo];
   return `<div class="journey" style="padding:0 24px">${JOURNEY.map(([n,st],i)=>{const done=idx>=ORDER.indexOf(st);const cur=!done&&!curDone&&sc.status!=='draft';if(cur)curDone=true;
-    return `<div class="step ${done?'done':cur?'cur':''}"><b>${n}</b>${done?'Done':cur?'In progress':sc.status==='draft'&&i===0?'To do':'Waiting'}</div>`;}).join('')}</div>`;}
+    return `<div class="step ${done?'done':cur?'cur':''}"><b>${n}</b><span class="who">${esc(who[i]||'Not assigned')}</span>${done?'Done':cur?'In progress':sc.status==='draft'&&i===0?'To do':'Waiting'}</div>`;}).join('')}</div>`;}
 
 /* ---------- dashboard / reports ---------- */
 async function dashView(title){
@@ -224,12 +261,15 @@ async function dashView(title){
   const cnt=l=>rows.filter(s=>s.rating===l).length,cfg=await getCfg();
   const names=cfg.bands.map(b=>b.label).reverse();const shade={'Outstanding':'var(--b1)','Exceeds Expectation':'var(--b2)','Meets Expectation':'var(--b3)','Below Expectation':'#9AA7BA'};
   const total=scored.length||1;
+  const sub=rows.filter(s=>s.status!=='draft').length,wait=rows.filter(s=>s.my_action).length,appr=rows.filter(s=>s.approved_by_me).length,back=rows.filter(s=>s.returned_by_me).length;
   $app.innerHTML=shell(`<div class="grid tiles">
-   <div class="tile"><div class="k">All scorecards</div><div class="v">${rows.filter(s=>s.status!=='draft').length}</div><div class="s">submitted this quarter</div></div>
-   <div class="tile"><div class="k">Waiting for you</div><div class="v" style="color:#9A5200">${rows.filter(s=>s.my_action).length}</div><div class="s">need your action</div></div>
-   <div class="tile"><div class="k">Completed</div><div class="v">${rows.filter(s=>s.status==='ceo_approved').length}</div><div class="s">approved by the CEO</div></div>
+   <div class="tile"><div class="k">Submitted scorecards</div><div class="v">${sub}</div><div class="s">scored by employee${S.tab==='reports'?'':' and line manager'}</div></div>
+   <div class="tile"><div class="k">Awaiting your review</div><div class="v" style="color:#9A5200">${wait}</div><div class="s">approve or send for revision</div></div>
+   <div class="tile"><div class="k">Approved by you</div><div class="v" style="color:var(--ok)">${appr}</div><div class="s">this cycle</div></div>
+   <div class="tile"><div class="k">Sent for revision</div><div class="v" style="color:#C0392B">${back}</div><div class="s">back to the previous step</div></div></div>
+   <div class="grid tiles" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
    <div class="tile"><div class="k">Average score</div><div class="v">${avg==null?'–':avg.toFixed(2)}</div><div class="s">out of 5</div></div>
-   <div class="tile" style="grid-column:span 2"><div class="k">Rating spread · ${scored.length} people</div><div class="spread" style="margin-top:8px">${[...cfg.bands].reverse().reverse().map(b=>({l:b.label,n:cnt(b.label)})).filter(x=>x.n).map(x=>`<div style="flex:${x.n};background:${shade[x.l]};${x.l==='Meets Expectation'?'color:var(--brand)':''}">${x.n}</div>`).join('')||'<div style="flex:1;color:var(--muted)">No scores yet</div>'}</div>
+   <div class="tile"><div class="k">Rating spread · ${scored.length} people</div><div class="spread" style="margin-top:8px">${[...cfg.bands].reverse().reverse().map(b=>({l:b.label,n:cnt(b.label)})).filter(x=>x.n).map(x=>`<div style="flex:${x.n};background:${shade[x.l]};${x.l==='Meets Expectation'?'color:var(--brand)':''}">${x.n}</div>`).join('')||'<div style="flex:1;color:var(--muted)">No scores yet</div>'}</div>
    <div class="legend">${cfg.bands.map(b=>`<span><i style="background:${shade[b.label]}"></i>${esc(b.label)}</span>`).join('')}</div></div></div>
    <div class="filters"><input class="f" id="fq" placeholder="Search by name" value="${esc(f.q)}"><select class="f" id="fr"><option value="">All ratings</option>${cfg.bands.map(b=>`<option ${f.r===b.label?'selected':''}>${esc(b.label)}</option>`).join('')}</select>
    <select class="f" id="fs"><option value="">All statuses</option><option value="mine" ${f.s==='mine'?'selected':''}>Waiting for me</option>${ORDER.slice(1).map(s=>`<option value="${s}" ${f.s===s?'selected':''}>${STATUS[s]}</option>`).join('')}</select></div>
@@ -255,10 +295,14 @@ async function reviewView(){
   $app.innerHTML=shell(`<nav style="margin-bottom:12px"><a href="#" id="back" style="font-weight:700">‹ Back to dashboard</a></nav>
   <div class="card"><div class="row"><div style="flex:1"><h2 style="margin:0;color:var(--brand)">${esc(e.name)}</h2><div class="muted">${esc(e.job_title||'')} · ${esc(e.practice||'')} · Line manager: ${esc(e.line_manager||'–')} · Overall manager: ${esc(e.overall_manager||'–')}</div></div>
    <span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':act?'':'grey'}"></span>${act?'Waiting for you':esc(STATUS[sc.status])}</span></div>
-   ${journey(sc).replace('padding:0 24px','padding:0')}
+   ${journey(sc,cfg).replace('padding:0 24px','padding:0')}
    <div class="grid tiles" style="margin:0"><div class="tile"><div class="k">Self score</div><div class="v">${sc.self_total==null?'–':sc.self_total.toFixed(2)}</div></div><div class="tile"><div class="k">Manager score</div><div class="v">${sc.manager_total==null?'Pending':sc.manager_total.toFixed(2)}</div><div class="s">${esc(sc.rating||'')}</div></div><div class="tile"><div class="k">Proof of work</div><div class="s">${sc.proof_of_work_url?`<a href="${esc(sc.proof_of_work_url)}" target="_blank" rel="noopener">Open link</a>`:'None'}</div>${(sc.evidence_links||[]).map(x=>`<div class="s"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.source)}</a></div>`).join('')}</div></div></div>
   <div class="card" style="margin-top:16px;padding:24px 0"><h3 style="margin:0 24px 8px">Scorecard</h3><div class="tblwrap"><table><thead><tr><th>#</th><th>KPI category</th><th>Weight</th><th>KPI</th><th>In category</th><th>Self</th><th>Manager</th></tr></thead><tbody>
-   ${d.kpis.map((k,i)=>`<tr><td>${i+1}</td><td>${esc(k.category)}</td><td>${k.category_weight}%</td><td>${esc(k.kpi)}</td><td>${k.weight_in_category}%</td><td>${k.self_score??'–'}</td><td>${isLM?`<input class="f num" type="number" min="1" max="5" step="1" data-k="${k.id}" value="${k.manager_score??''}">`:(k.manager_score??'–')}</td></tr>`).join('')}</tbody></table></div>
+   ${(()=>{const rows=hydrate(d.kpis);let n=0,m=0;const f2=v=>v==null?'–':v.toFixed(2);
+     return rows.map(k=>{const sub=!!k.puid,kids=!sub&&rows.some(x=>x.puid===k.uid);if(!sub){n++;m=0;}else m++;
+       const self=kids?f2(effScore(rows,k,'self_score')):(k.self_score??'–');
+       const mgr=kids?f2(effScore(rows,k,'manager_score')):(isLM?`<input class="f num" type="number" min="1" max="5" step="1" data-k="${k.id}" value="${k.manager_score??''}">`:(k.manager_score??'–'));
+       return `<tr class="${sub?'subrow':''}"><td>${sub?n+'.'+m:n}</td><td>${sub?'↳ '+esc(k.sub_category||''):esc(k.category)}</td><td>${sub?'–':k.category_weight+'%'}</td><td>${esc(k.kpi)}</td><td>${k.weight_in_category}%${sub?' <small class="muted">of KPI</small>':''}</td><td>${self}</td><td>${mgr}</td></tr>`;}).join('');})()}</tbody></table></div>
    ${act&&!mine?`<div style="padding:16px 24px 0;border-top:1px solid var(--row)"><div class="row">${isLM?'<button class="btn o" id="svm">Save scores</button>':''}<button class="btn" id="ap">${isLM?'Send to overall manager':'Approve: '+esc(step.label)}</button></div>
    <label class="l" for="rr" style="margin-top:16px">Return to previous step (give a reason)</label><div class="row"><input id="rr" class="f" style="flex:1" placeholder="Why is it being returned?"><button class="btn o" id="rt">Return</button></div></div>`:''}</div>
   <div class="split" style="margin-top:16px"><section class="card"><h3 style="margin-top:0">Audit trail</h3>${aud.map(a=>`<div style="padding:8px 0;border-top:1px solid var(--row)"><b>${esc(auditText(a))}</b><div class="muted" style="font-size:13px">${esc(a.actor)} · ${fmtTime(a.created_at)}</div></div>`).join('')||'<div class="muted">Nothing yet.</div>'}${!S.auditAll&&d.audit.length>5?'<button class="btn o sm" id="more" style="margin-top:8px">Load more</button>':''}</section>
@@ -279,24 +323,40 @@ function commentsBlock(d,inner){const cs=d.comments;
 function bindComments(id){const b=document.getElementById('cpost');if(!b)return;b.onclick=async()=>{try{await api('POST',`/v1/scorecards/${id}/comments`,{body:document.getElementById('cmt').value});render();}catch(e){flash('err',e.message);}};}
 
 /* ---------- goals ---------- */
+const GOALWHO={company:['ceo'],practice:['overall_manager','cos'],team:['line_manager']};
 async function goalsView(){
   const goals=(await api('GET','/v1/goals?fy='+S.fy)).goals,u=S.user;
   const level={ceo:'company',overall_manager:'practice',cos:'practice',line_manager:'team'}[u.role];
   const co=goals.filter(g=>g.level==='company'),pr=goals.filter(g=>g.level==='practice'),tm=goals.filter(g=>g.level==='team');
+  const can=g=>GOALWHO[g.level].includes(u.role)&&(g.level!=='team'||g.owner_id===u.id);
+  const ed=S.gedit?goals.find(g=>g.id===S.gedit):null;
   const parents=level==='practice'?co:level==='team'?pr.filter(g=>!u.practice||g.practice===u.practice):[];
+  const btns=g=>can(g)?`<span class="gbtn"><button class="btn o sm" data-ge="${g.id}">Edit</button> <button class="btn o sm" data-gd="${g.id}">Delete</button></span>`:'';
+  const line=(tag,g,extra='')=>`<div class="goal"><span class="tag">${tag}</span>${g.level==='company'?'<b>'+esc(g.title)+'</b>':esc(g.title)}${g.target?` <small>Target: ${esc(g.target)}</small>`:''}${extra}${btns(g)}`;
+  const formLevel=ed?ed.level:level;
+  const sel=ed?ed.parent_id:'';
   $app.innerHTML=shell(`<div class="split"><section class="card"><h2 style="margin-top:0">Goal cascade FY${S.fy}</h2>
-   ${co.map(c=>`<div class="goal"><span class="tag">COMPANY</span><b>${esc(c.title)}</b>${c.target?` <small>Target: ${esc(c.target)}</small>`:''}
-    <div class="cascade">${pr.filter(p=>p.parent_id===c.id).map(p=>`<div class="goal"><span class="tag">${esc((p.practice||'PRACTICE').toUpperCase())}</span>${esc(p.title)}
-     <div class="cascade">${tm.filter(t=>t.parent_id===p.id).map(t=>`<div class="goal"><span class="tag">TEAM</span>${esc(t.title)} <small>${esc(t.owner||'')}</small></div>`).join('')}</div></div>`).join('')}</div></div>`).join('')||'<p class="muted">No company goals yet.</p>'}
-   ${pr.filter(p=>!p.parent_id).concat(tm.filter(t=>!t.parent_id)).map(g=>`<div class="goal"><span class="tag">${esc(g.level.toUpperCase())}</span>${esc(g.title)}</div>`).join('')}</section>
-  ${level?`<section class="card"><h2 style="margin-top:0">Add ${level} goal</h2><div id="gm"></div>
-   ${level==='practice'?`<label class="l" for="gp">Practice</label><input id="gp" class="f" value="${esc(u.practice||'')}">`:''}
-   ${level!=='company'?`<label class="l" for="gpar" style="margin-top:12px">Linked to ${level==='practice'?'company':'practice'} goal</label><select id="gpar" class="f"><option value="">Choose…</option>${parents.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}</select>`:''}
-   <label class="l" for="gt" style="margin-top:12px">Goal</label><textarea id="gt" class="f"></textarea>
-   ${level==='company'?'<label class="l" for="gms" style="margin-top:12px">Success measure</label><input id="gms" class="f"><label class="l" for="gtg" style="margin-top:12px">Target</label><input id="gtg" class="f">':''}
-   <button class="btn" id="gs" style="margin-top:16px">Save goal</button></section>`:'<section class="card"><p class="muted">Goals are set by the CEO (company), overall managers and the Chief of Staff (practice), and line managers (team).</p></section>'}</div>`);
+   ${co.map(c=>`${line('COMPANY',c)}
+    <div class="cascade">${pr.filter(p=>p.parent_id===c.id).map(p=>`${line(esc((p.practice||'PRACTICE').toUpperCase()),p)}
+     <div class="cascade">${tm.filter(t=>t.parent_id===p.id).map(t=>`${line('TEAM',t,` <small>${esc(t.owner||'')}</small>`)}</div>`).join('')}</div></div>`).join('')}</div></div>`).join('')||'<p class="muted">No company goals yet.</p>'}
+   ${pr.filter(p=>!p.parent_id).concat(tm.filter(t=>!t.parent_id)).map(g=>`${line(esc(g.level.toUpperCase()),g,g.level==='team'?` <small>${esc(g.owner||'')}</small>`:'')}</div>`).join('')}</section>
+  ${formLevel&&(ed||level)?`<section class="card"><h2 style="margin-top:0">${ed?'Edit':'Add'} ${formLevel} goal</h2><div id="gm"></div>
+   ${formLevel==='practice'?`<label class="l" for="gp">Practice</label><input id="gp" class="f" value="${esc(ed?ed.practice:u.practice||'')}">`:''}
+   ${formLevel!=='company'?`<label class="l" for="gpar" style="margin-top:12px">Linked to ${formLevel==='practice'?'company':'practice'} goal</label><select id="gpar" class="f"><option value="">Choose…</option>${(formLevel==='practice'?co:pr.filter(g=>!u.practice||g.practice===u.practice||(ed&&ed.parent_id===g.id))).map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.title)}</option>`).join('')}</select>`:''}
+   <label class="l" for="gt" style="margin-top:12px">Goal</label><textarea id="gt" class="f">${esc(ed?ed.title:'')}</textarea>
+   ${formLevel==='company'?`<label class="l" for="gms" style="margin-top:12px">Success measure</label><input id="gms" class="f" value="${esc(ed?ed.measure:'')}"><label class="l" for="gtg" style="margin-top:12px">Target</label><input id="gtg" class="f" value="${esc(ed?ed.target:'')}">`:''}
+   <div class="row" style="margin-top:16px"><button class="btn" id="gs">${ed?'Save changes':'Save goal'}</button>${ed?'<button class="btn o" id="gc">Cancel</button>':''}</div></section>`:'<section class="card"><p class="muted">Goals are set by the CEO (company), overall managers and the Chief of Staff (practice), and line managers (team).</p></section>'}</div>`);
   bindShell();
-  const gs=document.getElementById('gs');if(gs)gs.onclick=async()=>{try{await api('POST','/v1/goals',{level,fy:S.fy,title:gt.value,practice:document.getElementById('gp')?.value,parent_id:document.getElementById('gpar')?.value||null,measure:document.getElementById('gms')?.value,target:document.getElementById('gtg')?.value});flash('ok','Goal saved.');}catch(e){document.getElementById('gm').innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}};
+  const byId=id=>goals.find(g=>g.id===id);
+  document.querySelectorAll('[data-ge]').forEach(b=>b.onclick=()=>{S.gedit=b.dataset.ge;render();window.scrollTo(0,0);});
+  document.querySelectorAll('[data-gd]').forEach(b=>b.onclick=async()=>{const g=byId(b.dataset.gd);
+    const kids=g.level==='team'?0:goals.filter(x=>x.parent_id===g.id).length;
+    if(!confirm('Delete this goal?\n\n'+g.title+(kids?`\n\n${kids} goal${kids===1?'':'s'} linked below it will stay, but will no longer be linked.`:'')))return;
+    try{await api('DELETE','/v1/goals/'+g.id);S.gedit=null;flash('ok','Goal deleted.');}catch(e){flash('err',e.message);}});
+  const gc=document.getElementById('gc');if(gc)gc.onclick=()=>{S.gedit=null;render();};
+  const gs=document.getElementById('gs');if(gs)gs.onclick=async()=>{
+    const body={level:formLevel,fy:S.fy,title:gt.value,practice:document.getElementById('gp')?.value,parent_id:document.getElementById('gpar')?.value||null,measure:document.getElementById('gms')?.value,target:document.getElementById('gtg')?.value};
+    try{if(ed)await api('PUT','/v1/goals/'+ed.id,body);else await api('POST','/v1/goals',body);S.gedit=null;flash('ok',ed?'Goal updated.':'Goal saved.');}catch(e){document.getElementById('gm').innerHTML=`<div class="msg err">${esc(e.message)}</div>`;}};
 }
 
 

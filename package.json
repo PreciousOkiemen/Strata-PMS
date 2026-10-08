@@ -8,7 +8,9 @@
     "db:schema": "node db/apply-schema.js",
     "db:seed": "node db/seed.js",
     "set-password": "node db/set-password.js",
-    "test": "node test/smoke.js"
+    "test": "node test/smoke.js",
+    "db:demo": "node db/seed-demo.js",
+    "db:demo:remove": "node db/seed-demo.js --remove"
   },
   "engines": { "node": ">=18" },
   "dependencies": {

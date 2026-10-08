@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { query, tx, audit } = require('../lib/db');
 const { requireAuth, requireRole } = require('../lib/auth');
-const { ratingFor, weightErrors, total, BANDS } = require('../lib/scoring');
+const { ratingFor, weightErrors, total, missingScores, BANDS } = require('../lib/scoring');
 const { ORDER, FLOW, stepFor } = require('../lib/workflow');
 
 router.use(requireAuth);
@@ -43,8 +43,14 @@ async function load(id, client) {
 }
 const isUuid = (s) => /^[0-9a-f-]{36}$/i.test(String(s));
 
-router.get('/config', (req, res) =>
-  res.json({ bands: BANDS, flow: FLOW.map((f) => ({ from: f.from, to: f.to, stage: f.stage, label: f.label })), order: ORDER }));
+router.get('/config', async (req, res, next) => {
+  try {
+    const { rows } = await query("SELECT name, role FROM users WHERE active AND role IN ('calibration','cos','ceo') ORDER BY name");
+    const roles = {};
+    for (const r of rows) roles[r.role] = roles[r.role] ? roles[r.role] + ', ' + r.name : r.name;
+    res.json({ bands: BANDS, flow: FLOW.map((f) => ({ from: f.from, to: f.to, stage: f.stage, label: f.label })), order: ORDER, roles });
+  } catch (e) { next(e); }
+});
 
 // List: ?fy=&quarter=
 router.get('/', async (req, res, next) => {
@@ -58,7 +64,13 @@ router.get('/', async (req, res, next) => {
           OR (s.status<>'draft' AND (e.line_manager_id=$3 OR e.overall_manager_id=$3
               OR $4 IN ('calibration','cos','ceo'))))
       ORDER BY s.updated_at DESC`, [fy, q, u.id, u.role]);
-    res.json({ scorecards: rows.map((r) => shape(r, u)) });
+    // my most recent decision on each scorecard: drives "Approved by you" and "Sent for revision"
+    const last = await query(
+      `SELECT DISTINCT ON (g.scorecard_id) g.scorecard_id, g.decision FROM signatures g
+       JOIN scorecards s ON s.id=g.scorecard_id WHERE g.signer_id=$1 AND s.fy=$2
+       ORDER BY g.scorecard_id, g.signed_at DESC`, [u.id, fy]);
+    const mine = new Map(last.rows.map((r) => [r.scorecard_id, r.decision]));
+    res.json({ scorecards: rows.map((r) => ({ ...shape(r, u), approved_by_me: mine.get(r.id) === 'approved', returned_by_me: mine.get(r.id) === 'returned' })) });
   } catch (e) { next(e); }
 });
 
@@ -68,7 +80,7 @@ router.get('/:id', async (req, res, next) => {
     const sc = await load(req.params.id);
     if (!sc || !canView(sc, req.user)) return res.status(404).json({ error: 'Not found.' });
     const [kpis, comments, audits, sigs] = await Promise.all([
-      query('SELECT id,position,category,category_weight,kpi,weight_in_category,self_score,manager_score FROM kpis WHERE scorecard_id=$1 ORDER BY position', [sc.id]),
+      query('SELECT id,position,parent_position,sub_category,category,category_weight,kpi,weight_in_category,self_score,manager_score FROM kpis WHERE scorecard_id=$1 ORDER BY position', [sc.id]),
       query(`SELECT c.id,c.parent_id,c.body,c.created_at,u.name AS author,u.role AS author_role
              FROM evaluation_comments c JOIN users u ON u.id=c.author_id WHERE scorecard_id=$1 ORDER BY c.created_at`, [sc.id]),
       query(`SELECT a.id,a.action,a.detail,a.created_at,COALESCE(u.name,a.actor_label,'System') AS actor
@@ -104,10 +116,25 @@ router.post('/', requireRole('employee', 'line_manager', 'overall_manager', 'cos
 });
 
 const cleanKpi = (k) => ({
+  parent_position: k.parent_position === '' || k.parent_position == null ? null : Number(k.parent_position),
+  sub_category: String(k.sub_category || '').trim().slice(0, 120) || null,
   category: String(k.category || '').trim().slice(0, 120), category_weight: Number(k.category_weight),
   kpi: String(k.kpi || '').trim().slice(0, 300), weight_in_category: Number(k.weight_in_category),
   self_score: k.self_score === '' || k.self_score == null ? null : Number(k.self_score),
 });
+// Sub-KPIs inherit the category and weight of the main KPI above them, and a main KPI with sub-KPIs gets its score from them.
+function linkSubKpis(kpis) {
+  for (let i = 0; i < kpis.length; i++) {
+    const k = kpis[i];
+    k.position = i;
+    if (k.parent_position == null) continue;
+    const p = kpis[k.parent_position];
+    if (!Number.isInteger(k.parent_position) || k.parent_position < 0 || k.parent_position >= i || !p || p.parent_position != null) return false;
+    k.category = p.category; k.category_weight = p.category_weight;
+  }
+  for (const k of kpis) if (k.parent_position != null) kpis[k.parent_position].self_score = null;
+  return true;
+}
 const validKpi = (k) => k.category && k.kpi && Number.isFinite(k.category_weight) && Number.isFinite(k.weight_in_category) &&
   k.category_weight >= 0 && k.category_weight <= 100 && k.weight_in_category >= 0 && k.weight_in_category <= 100 &&
   (k.self_score === null || (Number.isInteger(k.self_score) && k.self_score >= 1 && k.self_score <= 5));
@@ -117,7 +144,8 @@ router.put('/:id/self', async (req, res, next) => {
   try {
     if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Not found.' });
     const kpis = (Array.isArray(req.body.kpis) ? req.body.kpis : []).map(cleanKpi);
-    if (kpis.length > 40 || !kpis.every(validKpi)) return res.status(400).json({ error: 'Check KPI names, weights (0 to 100) and scores (1 to 5).' });
+    if (!linkSubKpis(kpis)) return res.status(400).json({ error: 'A sub-KPI must sit directly under a main KPI.' });
+    if (kpis.length > 60 || !kpis.every(validKpi)) return res.status(400).json({ error: 'Check KPI names, weights (0 to 100) and scores (1 to 5).' });
     const url = req.body.proof_of_work_url ? String(req.body.proof_of_work_url).trim().slice(0, 500) : null;
     if (url && !/^https:\/\//i.test(url)) return res.status(400).json({ error: 'Proof of work must be a link starting with https://' });
     await tx(async (c) => {
@@ -127,8 +155,8 @@ router.put('/:id/self', async (req, res, next) => {
       await c.query('DELETE FROM kpis WHERE scorecard_id=$1', [sc.id]);
       for (let i = 0; i < kpis.length; i++) {
         const k = kpis[i];
-        await c.query('INSERT INTO kpis (scorecard_id,position,category,category_weight,kpi,weight_in_category,self_score) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [sc.id, i, k.category, k.category_weight, k.kpi, k.weight_in_category, k.self_score]);
+        await c.query('INSERT INTO kpis (scorecard_id,position,parent_position,sub_category,category,category_weight,kpi,weight_in_category,self_score) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+          [sc.id, i, k.parent_position, k.sub_category, k.category, k.category_weight, k.kpi, k.weight_in_category, k.self_score]);
       }
       await c.query('UPDATE scorecards SET proof_of_work_url=$1, self_total=$2, updated_at=now() WHERE id=$3', [url, total(kpis, 'self_score'), sc.id]);
       await audit(c, { scorecardId: sc.id, actor: req.user.id, action: 'draft_saved' });
@@ -144,9 +172,9 @@ router.post('/:id/submit', async (req, res, next) => {
       const sc = await load(req.params.id, c);
       if (!sc || sc.employee_id !== req.user.id) throw Object.assign(new Error('Not found.'), { status: 404 });
       if (sc.status !== 'draft') throw Object.assign(new Error('Already submitted.'), { status: 409 });
-      const { rows: kpis } = await c.query('SELECT * FROM kpis WHERE scorecard_id=$1', [sc.id]);
+      const { rows: kpis } = await c.query('SELECT * FROM kpis WHERE scorecard_id=$1 ORDER BY position', [sc.id]);
       const errs = weightErrors(kpis);
-      if (kpis.some((k) => k.self_score == null)) errs.push('Give every KPI a self score from 1 to 5.');
+      if (missingScores(kpis, 'self_score')) errs.push('Give every KPI a self score from 1 to 5.');
       if (!sc.proof_of_work_url) errs.push('Add your proof of work link.');
       if (!sc.line_manager_id) errs.push('No line manager is assigned to you yet. Ask HR to update the roster.');
       if (errs.length) throw Object.assign(new Error(errs.join(' ')), { status: 422 });
@@ -191,10 +219,10 @@ router.post('/:id/approve', async (req, res, next) => {
       if (!step) throw Object.assign(new Error('Nothing to approve at this stage.'), { status: 409 });
       if (sc.employee_id === req.user.id || !step.canAct(sc, req.user))
         throw Object.assign(new Error('This step is not yours to approve.'), { status: 403 });
-      const { rows: kpis } = await c.query('SELECT * FROM kpis WHERE scorecard_id=$1', [sc.id]);
+      const { rows: kpis } = await c.query('SELECT * FROM kpis WHERE scorecard_id=$1 ORDER BY position', [sc.id]);
       let managerTotal = sc.manager_total;
       if (step.stage === 'line') {
-        if (kpis.some((k) => k.manager_score == null)) throw Object.assign(new Error('Score every KPI before sending on.'), { status: 422 });
+        if (missingScores(kpis, 'manager_score')) throw Object.assign(new Error('Score every KPI before sending on.'), { status: 422 });
         managerTotal = total(kpis, 'manager_score');
       }
       const finalRating = step.stage === 'ceo' ? ratingFor(managerTotal) : sc.final_rating;

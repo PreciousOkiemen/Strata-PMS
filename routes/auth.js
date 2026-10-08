@@ -7,8 +7,14 @@ const { sign, requireAuth, isAdmin } = require('../lib/auth');
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many attempts. Try again in a few minutes.' } });
 
-const pub = (u) => ({ id: u.id, email: u.email, name: u.name, job_title: u.job_title, practice: u.practice,
-  role: u.role, must_change_password: u.must_change_password, is_admin: isAdmin(u) });
+const pub = async (u) => {
+  const { rows } = await query(
+    `SELECT lm.name AS line_manager, om.name AS overall_manager FROM users x
+     LEFT JOIN users lm ON lm.id = x.line_manager_id LEFT JOIN users om ON om.id = x.overall_manager_id WHERE x.id=$1`, [u.id]);
+  return { id: u.id, email: u.email, name: u.name, job_title: u.job_title, practice: u.practice,
+    role: u.role, must_change_password: u.must_change_password, is_admin: isAdmin(u),
+    line_manager_id: u.line_manager_id, line_manager: rows[0]?.line_manager || null, overall_manager: rows[0]?.overall_manager || null };
+};
 
 router.post('/login', limiter, async (req, res, next) => {
   try {
@@ -19,11 +25,11 @@ router.post('/login', limiter, async (req, res, next) => {
     const ok = u && u.active && (await bcrypt.compare(password, u.password_hash));
     if (!ok) return res.status(401).json({ error: 'Email or password is incorrect.' });
     await tx((c) => audit(c, { actor: u.id, action: 'login' }));
-    res.json({ token: sign(u), user: pub(u) });
+    res.json({ token: sign(u), user: await pub(u) });
   } catch (e) { next(e); }
 });
 
-router.get('/me', requireAuth, (req, res) => res.json({ user: pub(req.user) }));
+router.get('/me', requireAuth, async (req, res, next) => { try { res.json({ user: await pub(req.user) }); } catch (e) { next(e); } });
 
 router.post('/change-password', requireAuth, async (req, res, next) => {
   try {
