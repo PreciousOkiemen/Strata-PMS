@@ -238,6 +238,21 @@ function changePwView(){
 const STD_CATS=['Core role delivery','Strategic / cross-functional','People, culture & values','Capability & development'];
 const uid=()=>Math.random().toString(36).slice(2,10);
 const hydrate=rows=>{const r=rows.map(k=>({...k,uid:uid()}));r.forEach(k=>{k.puid=k.parent_position==null?null:(r[k.parent_position]||{}).uid||null;});return r;};
+const STD_W={'Core role delivery':50,'Strategic / cross-functional':20,'People, culture & values':15,'Capability & development':15};
+/* Put every KPI under its category. The 4 standard categories always exist, in this order. */
+function arrange(rows,fill){
+  const order=STD_CATS.concat([...new Set(rows.map(r=>r.category))].filter(c=>!STD_CATS.includes(c)));
+  const out=[];
+  for(const c of order){
+    const mains=rows.filter(r=>!r.puid&&r.category===c);
+    if(!mains.length){
+      if(fill&&STD_CATS.includes(c))out.push({uid:uid(),puid:null,category:c,category_weight:STD_W[c],kpi:'',weight_in_category:0,self_score:'',manager_score:null});
+      continue;
+    }
+    for(const m of mains){out.push(m);rows.filter(k=>k.puid===m.uid).forEach(k=>out.push(k));}
+  }
+  return out;
+}
 const kidsOf=(rows,r)=>rows.filter(x=>x.puid===r.uid);
 /* score of a main KPI: its own score, or the weighted score of its sub-KPIs */
 function effScore(rows,r,f){const ks=kidsOf(rows,r);if(!ks.length)return r[f]===''||r[f]==null?null:+r[f];
@@ -261,7 +276,7 @@ async function mineView(){
   const d=await api('GET','/v1/scorecards/'+mine.id);
   const cfg=await getCfg(),goals=(await api('GET','/v1/goals?fy='+S.fy)).goals;
   const sc=d.scorecard,editable=sc.status==='draft';
-  if(!S.draft||S.draft.id!==sc.id||!editable)S.draft={id:sc.id,rows:hydrate(d.kpis),url:sc.proof_of_work_url||''};
+  S.draft={id:sc.id,rows:arrange(hydrate(d.kpis),editable),url:sc.proof_of_work_url||''}; 
   const T=S.draft;
   const me=S.user,lc=x=>String(x||'').toLowerCase();
   const visible={company:g=>true,practice:g=>!me.practice||lc(g.practice)===lc(me.practice),team:g=>g.owner_id===me.line_manager_id||g.owner_id===me.id};
@@ -277,7 +292,7 @@ async function mineView(){
     <div style="flex:0 1 420px;min-width:240px"><label class="l" for="pow">Proof of work (Notion link)</label><input id="pow" class="f" type="url" placeholder="https://www.notion.so/..." value="${esc(T.url)}" ${editable?'':'readonly'}></div></div>
     ${journey(sc,cfg)}<div class="tblwrap" style="margin-top:8px"><table class="sc"><thead><tr><th>#</th><th>KPI category</th><th>Weight %</th><th>KPI</th><th>Weight in category %</th><th>Self score</th><th>Manager</th>${editable?'<th></th>':''}</tr></thead><tbody id="kb">${kpiRows(T.rows,editable)}</tbody></table></div>
     <div id="wm"></div>
-    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'<button class="btn o sm" id="addk">+ Add KPI</button><span class="muted" style="font-size:13px">Use “+ Sub” on a KPI to break it into sub-KPIs. They share that KPI’s weight.</span>':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
+    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'<span class="muted" style="font-size:13px">Use “+ Sub” on a KPI to break it into sub-KPIs. They share that KPI’s weight.</span>':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
     <div style="margin:16px 24px 0;padding-top:16px;border-top:1px solid var(--row)" class="row"><span id="vs" style="font-weight:700"></span><span style="font-size:18px">Calculated score <strong id="tot" style="font-size:32px;color:var(--brand)"></strong> / 5</span><span id="rt"></span>${sc.manager_total!=null?`<span>Manager score <span class="chip ${ratingClass(sc.rating)}">${sc.manager_total.toFixed(2)}</span> ${esc(sc.rating||'')}</span>`:''}</div>
     ${sc.status!=='draft'?`<div style="padding:0 24px"><button class="btn o sm" style="margin-top:12px" data-open="${sc.id}">Open review page</button></div>`:''}</section></div>${commentsBlock(d)}`);
   bindShell();
@@ -299,24 +314,25 @@ async function mineView(){
     document.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{const i=+b.dataset.sub,p=T.rows[i];let j=i+1;while(j<T.rows.length&&T.rows[j].puid===p.uid)j++;
       const first=!kidsOf(T.rows,p).length;p.self_score='';
       T.rows.splice(j,0,{uid:uid(),puid:p.uid,category:p.category,category_weight:p.category_weight,sub_category:'',kpi:'',weight_in_category:first?100:0,self_score:'',manager_score:null});render();});
-    document.getElementById('addk').onclick=()=>{const l=[...T.rows].reverse().find(x=>!x.puid)||{category:STD_CATS[0],category_weight:0};T.rows.push({uid:uid(),puid:null,category:l.category,category_weight:l.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});render();};
-    const payload=()=>({kpis:T.rows.map(r=>({parent_position:r.puid?T.rows.findIndex(x=>x.uid===r.puid):null,sub_category:r.puid?r.sub_category||'':null,category:r.category,category_weight:r.category_weight,kpi:r.kpi,weight_in_category:r.weight_in_category,self_score:kidsOf(T.rows,r).length?'':r.self_score})),proof_of_work_url:T.url||null});
+      document.querySelectorAll('[data-addcat]').forEach(b=>b.onclick=()=>{const f=T.rows[+b.dataset.addcat];let j=-1;T.rows.forEach((x,k)=>{if(x.category===f.category)j=k;});
+      T.rows.splice(j+1,0,{uid:uid(),puid:null,category:f.category,category_weight:f.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});render();});
+      const payload=()=>({kpis:T.rows.map(r=>({parent_position:r.puid?T.rows.findIndex(x=>x.uid===r.puid):null,sub_category:r.puid?r.sub_category||'':null,category:r.category,category_weight:r.category_weight,kpi:r.kpi,weight_in_category:r.weight_in_category,self_score:kidsOf(T.rows,r).length?'':r.self_score})),proof_of_work_url:T.url||null});
     document.getElementById('save').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());flash('ok','Draft saved.');}catch(e){flash('err',e.message);}};
     document.getElementById('sub').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());await api('POST',`/v1/scorecards/${sc.id}/submit`);S.draft=null;flash('ok','Submitted to your line manager.');}catch(e){flash('err',e.message);}};
   }
   bindComments(sc.id);bindOpen();
 }
-function kpiRows(rows,ed){let n=0,m=0;return rows.map((r,i)=>{if(!r.puid){n++;m=0;}else m++;return kpiRow(r,i,ed,rows,r.puid?`${n}.${m}`:String(n));}).join('');}
-function kpiRow(r,i,ed,rows,label){const a=ed?'':'readonly';const sub=!!r.puid,hasKids=!sub&&rows.some(x=>x.puid===r.uid);
+function kpiRows(rows,ed){let cn=0;const seen=new Set();return rows.map((r,i)=>{const first=!r.puid&&!seen.has(r.category);if(first){seen.add(r.category);cn++;}return kpiRow(r,i,ed,rows,first?String(cn):'',first);}).join('');}
+function kpiRowfunction kpiRow(r,i,ed,rows,label,first){const a=ed?'':'readonly';const sub=!!r.puid,hasKids=!sub&&rows.some(x=>x.puid===r.uid);
   const inp=(f,v,c='',ph='')=>`<input class="f ${c}" data-i="${i}" data-f="${f}" value="${esc(v==null?'':v)}" placeholder="${esc(ph)}" ${a}>`;
   const cats=STD_CATS.includes(r.category)?STD_CATS:STD_CATS.concat(r.category?[r.category]:[]);
   const f2=v=>v==null?'–':v.toFixed(2);
   const catCell=sub?`<div class="subtag">↳ ${inp('sub_category',r.sub_category,'','Sub category')}</div>`
-    :ed?`<select class="f" data-i="${i}" data-f="category" aria-label="KPI category">${cats.map(c=>`<option ${c===r.category?'selected':''}>${esc(c)}</option>`).join('')}</select>`:esc(r.category);
+    :first?`<b>${esc(r.category)}</b>${ed?`<br><button type="button" class="lk" data-addcat="${i}">+ Add KPI</button>`:''}`:'';
   const self=hasKids?`<span class="derived" data-dself="${r.uid}">${f2(effScore(rows,r,'self_score'))}</span>`
     :ed?`<input class="f num" type="number" min="1" max="5" step="1" data-i="${i}" data-f="self_score" value="${esc(r.self_score==null?'':r.self_score)}">`:esc(r.self_score==null?'–':r.self_score);
   const mg=hasKids?f2(effScore(rows,r,'manager_score')):(r.manager_score==null?'–':r.manager_score);
-  return `<tr class="${sub?'subrow':''}"><td>${label}</td><td>${catCell}</td><td>${sub?'<span class="muted">–</span>':inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi,'',sub?'Sub-KPI':'')}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}${sub?'<br><small class="muted">% of main KPI</small>':''}</td><td>${self}</td><td style="font-weight:700">${mg}</td>${ed?`<td style="white-space:nowrap">${sub?'':`<button class="btn o sm" data-sub="${i}">+ Sub</button> `}<button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
+  return `<tr class="${sub?'subrow':''}"><td>${label}</td><td>${catCell}</td><td>${sub||!first?'':inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi,'',sub?'Sub-KPI':'')}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}${sub?'<br><small class="muted">% of main KPI</small>':''}</td><td>${self}</td><td style="font-weight:700">${mg}</td>${ed?`<td style="white-space:nowrap">${sub?'':`<button class="btn o sm" data-sub="${i}">+ Sub</button> `}<button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
 function journey(sc,cfg){const idx=ORDER.indexOf(sc.status);let curDone=false;const e=sc.employee||{},ro=(cfg&&cfg.roles)||{};const who=[e.name,e.line_manager,e.overall_manager,ro.calibration,ro.cos,ro.ceo];
   return `<div class="journey" style="padding:0 24px">${JOURNEY.map(([n,st],i)=>{const done=idx>=ORDER.indexOf(st);const cur=!done&&!curDone&&sc.status!=='draft';if(cur)curDone=true;
     return `<div class="step ${done?'done':cur?'cur':''}"><b>${n}</b><span class="who">${esc(who[i]||'Not assigned')}</span>${done?'Done':cur?'In progress':sc.status==='draft'&&i===0?'To do':'Waiting'}</div>`;}).join('')}</div>`;}
