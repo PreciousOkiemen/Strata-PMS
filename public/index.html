@@ -15,6 +15,10 @@ body{font-family:"Kumbh Sans","Helvetica Neue",Arial,sans-serif;font-size:15px;l
 h1,h2,h3,.hd{font-family:"Instrument Sans","Kumbh Sans",Arial,sans-serif;letter-spacing:-0.01em}
 a{color:var(--brand)}
 button{font:inherit;cursor:pointer}
+.btn .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.btn .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 .btn{min-height:44px;padding:0 24px;border-radius:9999px;font-weight:700;border:0;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn:hover{background:#0A5278}.btn:disabled{opacity:.55;cursor:not-allowed}
 .btn.o{background:#fff;color:var(--brand);border:1px solid var(--brand)}.btn.o:hover{background:var(--tint2)}
@@ -195,14 +199,17 @@ function loginView(mode){
     <div><b>Clear approvals</b><span>Follow six review steps, each recorded in an audit trail.</span></div>
   </section></div>`;
   const msg=h=>document.getElementById('lm').innerHTML=h;
+  const busy=(b,on,label)=>{b.disabled=on;b.innerHTML=on?`<span class="spin" aria-hidden="true"></span>${label}`:label;};
+  const busy=(b,on,label)=>{b.disabled=on;b.innerHTML=on?`<span class="spin" aria-hidden="true"></span>${label}`:label;};
   const done=j=>{S.token=j.token;localStorage.setItem('pms_token',j.token);S.user=j.user;S.tab=tabsFor(j.user)[0];render();};
   document.getElementById('t-in').onclick=()=>loginView('in');
   document.getElementById('t-up').onclick=()=>loginView('up');
   if(mode==='in'){
     document.getElementById('fp').onclick=()=>msg('<div class="msg ok">Ask the Chief of Staff to reset your password.</div>');
     document.getElementById('lf').onsubmit=async e=>{e.preventDefault();
+      const b=e.target.querySelector('button.btn');busy(b,true,'Signing in…');
       try{done(await api('POST','/v1/auth/login',{email:em.value,password:pw.value}));}
-      catch(x){msg(`<div class="msg err">${esc(x.message)}</div>`);}};
+      catch(x){busy(b,false,'Sign in');msg(`<div class="msg err">${esc(x.message)}</div>`);}};
   }else{
     const bars=document.querySelectorAll('.bars i'),ps=document.getElementById('ps');
     pw2.oninput=()=>{const v=pw2.value;
@@ -214,8 +221,9 @@ function loginView(mode){
     document.getElementById('uf').onsubmit=async e=>{e.preventDefault();
       if(pw2.value.length<10)return msg('<div class="msg err">Use at least 10 characters.</div>');
       if(pw2.value!==pw3.value)return msg('<div class="msg err">The passwords do not match.</div>');
+      const b=e.target.querySelector('button.btn');busy(b,true,'Creating account…');
       try{done(await api('POST','/v1/auth/register',{name:fn.value,email:em2.value,password:pw2.value}));}
-      catch(x){msg(`<div class="msg err">${esc(x.message)}</div>`);}};
+      catch(x){busy(b,false,'Create account');msg(`<div class="msg err">${esc(x.message)}</div>`);}};
   }
 }
 function changePwView(){
