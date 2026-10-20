@@ -17,8 +17,6 @@ a{color:var(--brand)}
 button{font:inherit;cursor:pointer}
 .btn .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.btn .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
 .btn{min-height:44px;padding:0 24px;border-radius:9999px;font-weight:700;border:0;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn:hover{background:#0A5278}.btn:disabled{opacity:.55;cursor:not-allowed}
 .btn.o{background:#fff;color:var(--brand);border:1px solid var(--brand)}.btn.o:hover{background:var(--tint2)}
@@ -199,7 +197,6 @@ function loginView(mode){
     <div><b>Clear approvals</b><span>Follow six review steps, each recorded in an audit trail.</span></div>
   </section></div>`;
   const msg=h=>document.getElementById('lm').innerHTML=h;
-  const busy=(b,on,label)=>{b.disabled=on;b.innerHTML=on?`<span class="spin" aria-hidden="true"></span>${label}`:label;};
   const busy=(b,on,label)=>{b.disabled=on;b.innerHTML=on?`<span class="spin" aria-hidden="true"></span>${label}`:label;};
   const done=j=>{S.token=j.token;localStorage.setItem('pms_token',j.token);S.user=j.user;S.tab=tabsFor(j.user)[0];render();};
   document.getElementById('t-in').onclick=()=>loginView('in');
