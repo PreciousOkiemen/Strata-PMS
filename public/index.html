@@ -323,7 +323,7 @@ async function mineView(){
   bindComments(sc.id);bindOpen();
 }
 function kpiRows(rows,ed){let cn=0;const seen=new Set();return rows.map((r,i)=>{const first=!r.puid&&!seen.has(r.category);if(first){seen.add(r.category);cn++;}return kpiRow(r,i,ed,rows,first?String(cn):'',first);}).join('');}
-function kpiRowfunction kpiRow(r,i,ed,rows,label,first){const a=ed?'':'readonly';const sub=!!r.puid,hasKids=!sub&&rows.some(x=>x.puid===r.uid);
+function kpiRow(r,i,ed,rows,label,first){const a=ed?'':'readonly';const sub=!!r.puid,hasKids=!sub&&rows.some(x=>x.puid===r.uid);
   const inp=(f,v,c='',ph='')=>`<input class="f ${c}" data-i="${i}" data-f="${f}" value="${esc(v==null?'':v)}" placeholder="${esc(ph)}" ${a}>`;
   const cats=STD_CATS.includes(r.category)?STD_CATS:STD_CATS.concat(r.category?[r.category]:[]);
   const f2=v=>v==null?'–':v.toFixed(2);
