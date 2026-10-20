@@ -22,10 +22,39 @@ router.post('/login', limiter, async (req, res, next) => {
     const password = String(req.body.password || '');
     const { rows } = await query('SELECT * FROM users WHERE lower(email)=$1', [email]);
     const u = rows[0];
-    const ok = u && u.active && (await bcrypt.compare(password, u.password_hash));
+    const ok = u && u.active && u.password_hash && (await bcrypt.compare(password, u.password_hash));
     if (!ok) return res.status(401).json({ error: 'Email or password is incorrect.' });
     await tx((c) => audit(c, { actor: u.id, action: 'login' }));
     res.json({ token: sign(u), user: await pub(u) });
+  } catch (e) { next(e); }
+});
+
+router.post('/register', limiter, async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    if (!email) return res.status(400).json({ error: 'Enter your work email.' });
+    if (password.length < 10) return res.status(400).json({ error: 'Password must be at least 10 characters.' });
+
+    const { rows } = await query('SELECT * FROM users WHERE lower(email)=$1', [email]);
+    const u = rows[0];
+    if (!u || !u.active)
+      return res.status(404).json({ error: 'We could not find that email. Ask the Chief of Staff to add you first.' });
+    if (u.password_hash)
+      return res.status(409).json({ error: 'This account already exists. Use the Sign in tab.' });
+
+    const hash = await bcrypt.hash(password, 12);
+    const done = await tx(async (c) => {
+      // password_hash IS NULL in the WHERE makes sure two people cannot register the same account at once
+      const r = await c.query(
+        'UPDATE users SET password_hash=$1, must_change_password=false WHERE id=$2 AND password_hash IS NULL RETURNING *',
+        [hash, u.id]);
+      if (!r.rows[0]) return null;
+      await audit(c, { actor: u.id, action: 'account_registered' });
+      return r.rows[0];
+    });
+    if (!done) return res.status(409).json({ error: 'This account already exists. Use the Sign in tab.' });
+    res.json({ token: sign(done), user: await pub(done) });
   } catch (e) { next(e); }
 });
 

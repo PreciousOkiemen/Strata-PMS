@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   role text NOT NULL CHECK (role IN ('employee','line_manager','overall_manager','calibration','cos','ceo')),
   line_manager_id uuid REFERENCES users(id),
   overall_manager_id uuid REFERENCES users(id),
-  password_hash text NOT NULL,
+  password_hash text,
   must_change_password boolean NOT NULL DEFAULT true,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()

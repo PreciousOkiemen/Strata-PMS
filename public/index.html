@@ -77,6 +77,24 @@ tr.mine td{background:#FFFCEB}
 .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}
 .login{max-width:420px;margin:12vh auto;padding:0 16px}
+.auth{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:32px;padding:20px 16px 56px;box-sizing:border-box}
+.auth-top{width:100%;max-width:1536px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 16px;box-sizing:border-box}
+.auth-card{width:100%;max-width:480px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;box-shadow:0 10px 30px rgba(12,98,145,.08)}
+.auth-card h1{margin:0;font-size:30px;color:var(--brand);text-align:center}
+.auth-card .sub{color:var(--muted);text-align:center;margin-top:4px}
+.seg-wrap{display:flex;gap:8px;background:var(--tint2);border-radius:9999px;padding:4px}
+.seg{flex:1;min-height:44px;border:0;border-radius:9999px;font-weight:700;font-size:15px;background:transparent;color:var(--brand)}
+.seg[aria-selected=true]{background:var(--brand);color:#fff}
+.seg:focus-visible,.lk:focus-visible{outline:3px solid #BFE0F0;outline-offset:2px}
+.lk{background:none;border:0;padding:0;font-size:14px;font-weight:700;color:var(--brand);min-height:44px}
+.lk:hover{color:var(--accent);text-decoration:underline}
+.bars{display:flex;gap:6px;margin-top:10px}
+.bars i{flex:1;height:6px;border-radius:3px;background:var(--tint)}
+.bars i.on{background:var(--brand)}
+.auth-feats{width:100%;max-width:960px;display:flex;flex-wrap:wrap;gap:16px}
+.auth-feats>div{flex:1 1 240px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px 20px}
+.auth-feats b{display:block;font-family:"Instrument Sans",sans-serif;color:var(--brand);font-size:17px}
+.auth-feats span{color:var(--ink2);font-size:14px}
 .sc td input.f{min-height:38px}
 .num{width:72px}
 .muted{color:var(--muted)}
@@ -142,15 +160,63 @@ function bindShell(){
 }
 
 /* ---------- login ---------- */
-function loginView(){
-  $app.innerHTML=`<div class="login"><div class="logo" style="margin-bottom:24px">${LOGO}<span class="hd">Strata</span></div>
-  <div class="card"><h2 style="margin:0 0 4px">Sign in</h2><p class="muted" style="margin:0 0 16px">Performance Management System</p>
-  <div id="lm"></div><form id="lf"><label class="l" for="em">Work email</label><input id="em" class="f" type="email" autocomplete="username" required>
-  <label class="l" for="pw" style="margin-top:12px">Password</label><input id="pw" class="f" type="password" autocomplete="current-password" required>
-  <button class="btn" style="margin-top:20px;width:100%">Sign in</button></form></div></div>`;
-  document.getElementById('lf').onsubmit=async e=>{e.preventDefault();
-    try{const j=await api('POST','/v1/auth/login',{email:em.value,password:pw.value});S.token=j.token;localStorage.setItem('pms_token',j.token);S.user=j.user;S.tab=tabsFor(j.user)[0];render();}
-    catch(x){document.getElementById('lm').innerHTML=`<div class="msg err">${esc(x.message)}</div>`;}};
+function loginView(mode){
+  mode=mode||'in';
+  const inForm=`<div><h1>Welcome to Strata PMS</h1><div class="sub">Sign in to see your scorecard and reviews.</div></div>
+  <form id="lf" style="display:flex;flex-direction:column;gap:16px">
+    <div><label class="l" for="em">Work email</label><input id="em" class="f" type="email" placeholder="name@strata.ng" autocomplete="username" required></div>
+    <div><label class="l" for="pw">Password</label><input id="pw" class="f" type="password" placeholder="Your password" autocomplete="current-password" required></div>
+    <div style="text-align:right"><button type="button" class="lk" id="fp">Forgot password?</button></div>
+    <button class="btn" style="width:100%">Sign in</button>
+  </form>`;
+  const upForm=`<div><h1>Create your account</h1><div class="sub">Join your team on Strata PMS.</div></div>
+  <form id="uf" style="display:flex;flex-direction:column;gap:16px">
+    <div><label class="l" for="fn">Full name</label><input id="fn" class="f" type="text" placeholder="Oluwatobi Omotayo" autocomplete="name" required></div>
+    <div><label class="l" for="em2">Work email</label><input id="em2" class="f" type="email" placeholder="name@strata.ng" autocomplete="username" required></div>
+    <div><label class="l" for="pw2">Password</label><input id="pw2" class="f" type="password" placeholder="10+ characters" autocomplete="new-password" required>
+      <div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;color:var(--ink2)"><span>At least 10 characters</span><strong id="ps"></strong></div></div>
+    <div><label class="l" for="pw3">Confirm password</label><input id="pw3" class="f" type="password" placeholder="Repeat password" autocomplete="new-password" required></div>
+    <button class="btn" style="width:100%">Create account</button>
+    <div style="text-align:center;font-size:13px;color:var(--muted)">Your job title, practice and managers are already set up by the Chief of Staff.</div>
+  </form>`;
+  $app.innerHTML=`<div class="auth">
+  <div class="auth-top"><div class="logo">${LOGO}<span class="hd">Strata</span></div><div style="color:var(--ink2)">Performance Management System</div></div>
+  <section class="auth-card">
+    <div class="seg-wrap" role="tablist">
+      <button type="button" class="seg" role="tab" id="t-in" aria-selected="${mode==='in'}">Sign in</button>
+      <button type="button" class="seg" role="tab" id="t-up" aria-selected="${mode==='up'}">Create account</button>
+    </div>
+    <div id="lm"></div>${mode==='in'?inForm:upForm}
+  </section>
+  <section class="auth-feats" aria-label="What you can do">
+    <div><b>Goal alignment</b><span>See how company, practice and team goals connect to your KPIs.</span></div>
+    <div><b>Weighted scorecards</b><span>Score your KPIs. Totals always add to 100%.</span></div>
+    <div><b>Clear approvals</b><span>Follow six review steps, each recorded in an audit trail.</span></div>
+  </section></div>`;
+  const msg=h=>document.getElementById('lm').innerHTML=h;
+  const done=j=>{S.token=j.token;localStorage.setItem('pms_token',j.token);S.user=j.user;S.tab=tabsFor(j.user)[0];render();};
+  document.getElementById('t-in').onclick=()=>loginView('in');
+  document.getElementById('t-up').onclick=()=>loginView('up');
+  if(mode==='in'){
+    document.getElementById('fp').onclick=()=>msg('<div class="msg ok">Ask the Chief of Staff to reset your password.</div>');
+    document.getElementById('lf').onsubmit=async e=>{e.preventDefault();
+      try{done(await api('POST','/v1/auth/login',{email:em.value,password:pw.value}));}
+      catch(x){msg(`<div class="msg err">${esc(x.message)}</div>`);}};
+  }else{
+    const bars=document.querySelectorAll('.bars i'),ps=document.getElementById('ps');
+    pw2.oninput=()=>{const v=pw2.value;
+      const n=[v.length>=10,v.length>=14,/[a-z]/.test(v)&&/[A-Z]/.test(v),/\d/.test(v)&&/[^A-Za-z0-9]/.test(v)].filter(Boolean).length;
+      const lvl=v.length<10?0:Math.max(1,n);
+      bars.forEach((b,i)=>b.classList.toggle('on',i<lvl));
+      ps.textContent=v?['Too short','Weak','Okay','Good','Strong'][lvl]:'';
+      ps.style.color=lvl>=3?'var(--ok)':lvl===0?'var(--bad)':'var(--ink2)';};
+    document.getElementById('uf').onsubmit=async e=>{e.preventDefault();
+      if(pw2.value.length<10)return msg('<div class="msg err">Use at least 10 characters.</div>');
+      if(pw2.value!==pw3.value)return msg('<div class="msg err">The passwords do not match.</div>');
+      try{done(await api('POST','/v1/auth/register',{name:fn.value,email:em2.value,password:pw2.value}));}
+      catch(x){msg(`<div class="msg err">${esc(x.message)}</div>`);}};
+  }
 }
 function changePwView(){
   $app.innerHTML=`<div class="login"><div class="logo" style="margin-bottom:24px">${LOGO}<span class="hd">Strata</span></div>
@@ -421,8 +487,8 @@ async function peopleView(){
   const dl=()=>{const b=document.getElementById('dlc');if(b)b.onclick=()=>download('temporary-passwords.csv','name,email,temp_password\n'+S.creds.list.map(c=>[c.name,c.email,c.temp_password].map(csvCell).join(',')).join('\n'));};dl();
   psave.onclick=async()=>{const person={name:pn.value,email:pe.value,job_title:pj.value,practice:pp.value,role:pr.value,line_manager_email:pl.value,overall_manager_email:po.value};
     try{const r=await api('POST','/v1/people/import',{people:[person]});S.edit=null;
-      if(r.credentials.length){showCreds(r.credentials,'Account created');flash('ok',person.name+' was added.');}else{S.creds=null;flash('ok','Changes saved.');}
-    }catch(e){document.getElementById('pm').innerHTML=`<div class="msg err">${esc(e.message)}${(e.errors||[]).length?`<ul class="errl">${e.errors.map(x=>`<li>${esc(x.error)}</li>`).join('')}</ul>`:''}</div>`;}};
+      S.creds=null;flash('ok',r.created?`${person.name} was added. Ask them to open the sign-in page and choose Create account with ${person.email}.`:'Changes saved.');
+  }catch(e){document.getElementById('pm').innerHTML=`<div class="msg err">${esc(e.message)}${(e.errors||[]).length?`<ul class="errl">${e.errors.map(x=>`<li>${esc(x.error)}</li>`).join('')}</ul>`:''}</div>`;}};
   if(document.getElementById('pcancel'))pcancel.onclick=()=>{S.edit=null;render();};
   document.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{S.edit=byId(b.dataset.ed);render();window.scrollTo(0,0);});
   document.querySelectorAll('[data-rp]').forEach(b=>b.onclick=async()=>{const p=byId(b.dataset.rp);if(!confirm('Reset the password for '+p.name+'? Their current password will stop working.'))return;
