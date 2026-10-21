@@ -149,6 +149,7 @@ router.put('/:id/self', async (req, res, next) => {
     const url = req.body.proof_of_work_url ? String(req.body.proof_of_work_url).trim().slice(0, 500) : null;
     if (url && !/^https:\/\//i.test(url)) return res.status(400).json({ error: 'Proof of work must be a link starting with https://' });
     await tx(async (c) => {
+      await c.query('SELECT 1 FROM scorecards WHERE id=$1 FOR UPDATE', [req.params.id]);
       const sc = await load(req.params.id, c);
       if (!sc || sc.employee_id !== req.user.id) throw Object.assign(new Error('Not found.'), { status: 404 });
       if (sc.status !== 'draft') throw Object.assign(new Error('This scorecard is already submitted.'), { status: 409 });

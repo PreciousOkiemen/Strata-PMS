@@ -16,6 +16,7 @@ h1,h2,h3,.hd{font-family:"Instrument Sans","Kumbh Sans",Arial,sans-serif;letter-
 a{color:var(--brand)}
 button{font:inherit;cursor:pointer}
 .btn .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+.btn.o .spin{border-color:rgba(12,98,145,.3);border-top-color:var(--brand)}
 @keyframes sp{to{transform:rotate(360deg)}}
 .btn{min-height:44px;padding:0 24px;border-radius:9999px;font-weight:700;border:0;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn:hover{background:#0A5278}.btn:disabled{opacity:.55;cursor:not-allowed}
@@ -141,6 +142,7 @@ function logout(){localStorage.removeItem('pms_token');S.token=null;S.user=null;
 const ratingClass=l=>({'Outstanding':'r-o','Exceeds Expectation':'r-e','Meets Expectation':'r-m'}[l]||'r-b');
 const fmtDate=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
 const fmtTime=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+async function withBusy(b,label,fn){const t=b.innerHTML;b.disabled=true;b.innerHTML=`<span class="spin" aria-hidden="true"></span>${label}`;try{return await fn();}finally{b.disabled=false;b.innerHTML=t;}}
 const chip=sc=>sc.rating?`<span class="chip ${ratingClass(sc.rating)}">${sc.manager_total.toFixed(2)}</span>`:'<span class="muted">Not scored</span>';
 
 /* ---------- shell ---------- */
@@ -268,13 +270,15 @@ function weightMsgs(rows){const m=[],c={};rows.filter(r=>!r.puid).forEach(r=>{c[
 const bandFor=(s,cfg)=>s==null?null:cfg.bands.find(b=>s>=b.min).label;
 
 async function mineView(){
-  const list=(await api('GET',`/v1/scorecards?fy=${S.fy}&quarter=${S.quarter}`)).scorecards;
+  const keep=S.keep&&S.mc&&S.mc.q===S.quarter&&S.mc.fy===S.fy;S.keep=false;
+  const list=keep?S.mc.list:(await api('GET',`/v1/scorecards?fy=${S.fy}&quarter=${S.quarter}`)).scorecards;
   const mine=list.find(s=>s.employee.id===S.user.id);
   if(!mine){
     $app.innerHTML=shell(`<div class="card" style="max-width:640px"><h2 style="margin-top:0">No scorecard for ${S.quarter} FY${S.fy} yet</h2><p class="muted">Start from the standard KPI template and adjust it with your line manager.</p><button class="btn" id="mk">Create my scorecard</button></div>`);bindShell();
     document.getElementById('mk').onclick=async()=>{try{await api('POST','/v1/scorecards',{fy:S.fy,quarter:S.quarter});S.draft=null;render();}catch(e){flash('err',e.message);}};return;}
-  const d=await api('GET','/v1/scorecards/'+mine.id);
-  const cfg=await getCfg(),goals=(await api('GET','/v1/goals?fy='+S.fy)).goals;
+  const d=keep?S.mc.d:await api('GET','/v1/scorecards/'+mine.id);
+  const cfg=await getCfg(),goals=keep?S.mc.goals:(await api('GET','/v1/goals?fy='+S.fy)).goals;
+  S.mc={list,d,goals,q:S.quarter,fy:S.fy};
   const sc=d.scorecard,editable=sc.status==='draft';
   S.draft={id:sc.id,rows:arrange(hydrate(d.kpis),editable),url:sc.proof_of_work_url||''}; 
   const T=S.draft;
@@ -310,16 +314,16 @@ async function mineView(){
       r[f]=e.target.value;
       if(f==='category_weight'&&!r.puid)T.rows.forEach((x,j)=>{if(x!==r&&x.category===r.category){x.category_weight=r.category_weight;const el=document.querySelector(`[data-i="${j}"][data-f="category_weight"]`);if(el)el.value=r.category_weight;}});
       upd();};
-    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const r=T.rows[+b.dataset.del];T.rows=T.rows.filter(x=>x!==r&&x.puid!==r.uid);render();});
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const r=T.rows[+b.dataset.del];T.rows=T.rows.filter(x=>x!==r&&x.puid!==r.uid);S.keep=true;render();});
     document.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{const i=+b.dataset.sub,p=T.rows[i];let j=i+1;while(j<T.rows.length&&T.rows[j].puid===p.uid)j++;
       const first=!kidsOf(T.rows,p).length;p.self_score='';
-      T.rows.splice(j,0,{uid:uid(),puid:p.uid,category:p.category,category_weight:p.category_weight,sub_category:'',kpi:'',weight_in_category:first?100:0,self_score:'',manager_score:null});render();});
+      T.rows.splice(j,0,{uid:uid(),puid:p.uid,category:p.category,category_weight:p.category_weight,sub_category:'',kpi:'',weight_in_category:first?100:0,self_score:'',manager_score:null});S.keep=true;render();});
       document.querySelectorAll('[data-addcat]').forEach(b=>b.onclick=()=>{const f=T.rows[+b.dataset.addcat];let j=-1;T.rows.forEach((x,k)=>{if(x.category===f.category)j=k;});
-      T.rows.splice(j+1,0,{uid:uid(),puid:null,category:f.category,category_weight:f.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});render();});
+      T.rows.splice(j+1,0,{uid:uid(),puid:null,category:f.category,category_weight:f.category_weight,kpi:'',weight_in_category:0,self_score:'',manager_score:null});S.keep=true;render();});
       const payload=()=>({kpis:T.rows.map(r=>({parent_position:r.puid?T.rows.findIndex(x=>x.uid===r.puid):null,sub_category:r.puid?r.sub_category||'':null,category:r.category,category_weight:r.category_weight,kpi:r.kpi,weight_in_category:r.weight_in_category,self_score:kidsOf(T.rows,r).length?'':r.self_score})),proof_of_work_url:T.url||null});
-    document.getElementById('save').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());flash('ok','Draft saved.');}catch(e){flash('err',e.message);}};
-    document.getElementById('sub').onclick=async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());await api('POST',`/v1/scorecards/${sc.id}/submit`);S.draft=null;flash('ok','Submitted to your line manager.');}catch(e){flash('err',e.message);}};
-  }
+    document.getElementById('save').onclick=e=>withBusy(e.currentTarget,'Saving…',async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());flash('ok','Draft saved.');}catch(x){flash('err',x.message);}});
+    document.getElementById('sub').onclick=e=>withBusy(e.currentTarget,'Submitting…',async()=>{try{await api('PUT',`/v1/scorecards/${sc.id}/self`,payload());await api('POST',`/v1/scorecards/${sc.id}/submit`);S.draft=null;flash('ok','Submitted to your line manager.');}catch(x){flash('err',x.message);}});
+    }
   bindComments(sc.id);bindOpen();
 }
 function kpiRows(rows,ed){let cn=0;const seen=new Set();return rows.map((r,i)=>{const first=!r.puid&&!seen.has(r.category);if(first){seen.add(r.category);cn++;}return kpiRow(r,i,ed,rows,first?String(cn):'',first);}).join('');}
