@@ -280,7 +280,7 @@ async function mineView(){
   const cfg=await getCfg(),goals=keep?S.mc.goals:(await api('GET','/v1/goals?fy='+S.fy)).goals;
   S.mc={list,d,goals,q:S.quarter,fy:S.fy};
   const sc=d.scorecard,editable=sc.status==='draft';
-  S.draft={id:sc.id,rows:arrange(hydrate(d.kpis),editable),url:sc.proof_of_work_url||''}; 
+  if(!S.draft||S.draft.id!==sc.id||!editable)S.draft={id:sc.id,rows:arrange(hydrate(d.kpis),editable),url:sc.proof_of_work_url||''};
   const T=S.draft;
   const me=S.user,lc=x=>String(x||'').toLowerCase();
   const visible={company:g=>true,practice:g=>!me.practice||lc(g.practice)===lc(me.practice),team:g=>g.owner_id===me.line_manager_id||g.owner_id===me.id};
