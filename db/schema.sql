@@ -95,3 +95,15 @@ CREATE INDEX IF NOT EXISTS idx_audit_scorecard ON audit_logs(scorecard_id, creat
 CREATE INDEX IF NOT EXISTS idx_comments_scorecard ON evaluation_comments(scorecard_id);
 CREATE INDEX IF NOT EXISTS idx_users_line ON users(line_manager_id);
 CREATE INDEX IF NOT EXISTS idx_users_overall ON users(overall_manager_id);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  title text NOT NULL,
+  body text,
+  scorecard_id uuid REFERENCES scorecards(id) ON DELETE CASCADE,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);

@@ -15,6 +15,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/people', require('./routes/people'));
 app.use('/api/v1/scorecards', require('./routes/scorecards'));
+app.use('/api/v1/notifications', require('./routes/notifications'));
 app.use('/api/v1/goals', require('./routes/goals'));
 app.use('/api/v3/external', require('./routes/external'));
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));

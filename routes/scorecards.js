@@ -3,6 +3,7 @@ const { query, tx, audit } = require('../lib/db');
 const { requireAuth, requireRole } = require('../lib/auth');
 const { ratingFor, weightErrors, total, missingScores, BANDS } = require('../lib/scoring');
 const { ORDER, FLOW, stepFor } = require('../lib/workflow');
+const { notify, idsWithRole } = require('../lib/notify');
 
 router.use(requireAuth);
 
@@ -42,6 +43,10 @@ async function load(id, client) {
   return rows[0];
 }
 const isUuid = (s) => /^[0-9a-f-]{36}$/i.test(String(s));
+// Who owns a workflow stage for this scorecard
+const approversFor = async (c, sc, stage) =>
+  stage === 'line' ? [sc.line_manager_id] : stage === 'om' ? [sc.overall_manager_id]
+  : idsWithRole(c, stage === 'cal' ? 'calibration' : stage);
 
 router.get('/config', async (req, res, next) => {
   try {
@@ -181,6 +186,7 @@ router.post('/:id/submit', async (req, res, next) => {
       if (errs.length) throw Object.assign(new Error(errs.join(' ')), { status: 422 });
       await c.query("UPDATE scorecards SET status='submitted', submitted_at=now(), self_total=$2, updated_at=now() WHERE id=$1", [sc.id, total(kpis, 'self_score')]);
       await audit(c, { scorecardId: sc.id, actor: req.user.id, action: 'submitted', detail: { self_total: total(kpis, 'self_score') } });
+      await notify(c, sc.line_manager_id, { type: 'submitted', title: `${sc.employee_name} submitted their ${sc.quarter} scorecard`, body: 'Review and score it.', scorecardId: sc.id });
     });
     res.json({ ok: true });
   } catch (e) { next(e); }
@@ -231,6 +237,9 @@ router.post('/:id/approve', async (req, res, next) => {
         [step.to, managerTotal, finalRating, sc.id]);
       await c.query("INSERT INTO signatures (scorecard_id,stage,signer_id,decision) VALUES ($1,$2,$3,'approved')", [sc.id, step.stage, req.user.id]);
       await audit(c, { scorecardId: sc.id, actor: req.user.id, action: 'approved', detail: { stage: step.stage, label: step.label, manager_total: managerTotal } });
+      const next = stepFor(step.to);
+      if (next) await notify(c, await approversFor(c, sc, next.stage), { type: 'awaiting', title: `${sc.employee_name}'s ${sc.quarter} scorecard needs your review`, body: next.label, scorecardId: sc.id });
+      else await notify(c, sc.employee_id, { type: 'final', title: `Your ${sc.quarter} scorecard is final`, body: `Rating: ${finalRating}`, scorecardId: sc.id });
       return { status: step.to, manager_total: managerTotal };
     });
     res.json(out);
@@ -255,6 +264,9 @@ router.post('/:id/return', async (req, res, next) => {
       await c.query("INSERT INTO signatures (scorecard_id,stage,signer_id,decision) VALUES ($1,$2,$3,'returned')", [sc.id, step.stage, req.user.id]);
       await c.query('INSERT INTO evaluation_comments (scorecard_id,author_id,body) VALUES ($1,$2,$3)', [sc.id, req.user.id, `Returned: ${reason}`]);
       await audit(c, { scorecardId: sc.id, actor: req.user.id, action: 'returned', detail: { stage: step.stage, to: prev, reason } });
+      await notify(c, prev === 'draft' ? [sc.employee_id] : await approversFor(c, sc, stepFor(prev).stage),
+        { type: 'returned', title: prev === 'draft' ? `Your ${sc.quarter} scorecard was returned` : `${sc.employee_name}'s ${sc.quarter} scorecard was returned to you`,
+          body: `${req.user.name}: “${reason}”`, scorecardId: sc.id });
     });
     res.json({ ok: true });
   } catch (e) { next(e); }
@@ -271,6 +283,8 @@ router.post('/:id/comments', async (req, res, next) => {
     await tx(async (c) => {
       await c.query('INSERT INTO evaluation_comments (scorecard_id,author_id,parent_id,body) VALUES ($1,$2,$3,$4)', [sc.id, req.user.id, parent, body]);
       await audit(c, { scorecardId: sc.id, actor: req.user.id, action: 'commented' });
+      const others = (sc.status === 'draft' ? [sc.employee_id] : [sc.employee_id, sc.line_manager_id, sc.overall_manager_id]).filter((id) => id && id !== req.user.id);
+      await notify(c, others, { type: 'commented', title: `${req.user.name} commented on ${sc.employee_name}'s ${sc.quarter} scorecard`, body: `“${body.slice(0, 120)}”`, scorecardId: sc.id });
     });
     res.status(201).json({ ok: true });
   } catch (e) { next(e); }

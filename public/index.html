@@ -113,6 +113,27 @@ tr.subrow td{background:#F8FBFD}tr.subrow td:first-child{color:var(--muted)}
 .derived{display:inline-block;min-width:48px;padding:6px 8px;border-radius:6px;background:var(--tint2);font-weight:700;text-align:center}
 .gbtn{margin-left:8px;vertical-align:middle}
 table.sc{min-width:1000px}.sc td:nth-child(2){min-width:210px}.sc td:nth-child(4){min-width:230px}
+.bellwrap{position:relative;display:inline-block}
+.bell{position:relative;width:44px;height:44px;padding:0;border-radius:50%;background:#fff;border:1px solid var(--wborder);color:var(--brand);display:inline-flex;align-items:center;justify-content:center}
+.bell:hover{background:var(--tint2)}
+.bell .bdg{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--bad,#C0392B);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--tint2)}
+.nfdd{position:absolute;right:0;top:calc(100% + 10px);width:440px;max-width:calc(100vw - 32px);background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 12px 32px rgba(12,98,145,.18);z-index:50;text-align:left;overflow:hidden}
+.nfh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px}
+.nfh h2,.nfh h3{margin:0;color:var(--brand)}.nfh h3{font-size:18px}.nfh h2{font-size:24px}
+.nlink{background:none;border:0;padding:0;color:var(--brand);font-weight:700;font-size:13px}
+.nact{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.npill{min-height:40px;padding:0 20px;border-radius:9999px;font-weight:700;background:#fff;color:var(--brand);border:1px solid var(--wborder)}
+.npill[aria-pressed=true]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.ncard{padding:0;overflow:hidden}
+.ngh{padding:10px 20px;background:var(--tint2);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nfi{display:flex;align-items:flex-start;gap:14px;width:100%;padding:14px 20px;border:0;border-top:1px solid var(--row);background:#fff;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.nfi:hover{background:var(--tint2)}.nfi.un{background:#F0F7FB}
+.nic{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.nb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nb b{font-size:14px}.nb span{font-size:14px;color:var(--ink2)}.nb small{font-size:12px;color:var(--muted)}
+.dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:6px}
+.nfv{display:block;width:100%;padding:14px;border:0;border-top:1px solid var(--row);background:var(--tint2);color:var(--brand);font-weight:700}
+.nempty{padding:28px 20px;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
@@ -129,7 +150,7 @@ const TABS={employee:['mine'],line_manager:['mine','reports','goals'],overall_ma
 const TABNAME={mine:'My scorecard',reports:'Direct reports',dash:'Dashboard',goals:'Goals',people:'People'};
 const tabsFor=u=>TABS[u.role].concat(u.is_admin?['people']:[]);
 const nowQ=()=>'Q'+(Math.floor(new Date().getMonth()/3)+1);
-const S={token:localStorage.getItem('pms_token'),user:null,tab:null,fy:new Date().getFullYear(),quarter:nowQ(),review:null,page:1,filter:{q:'',r:'',s:''},auditAll:false,msg:null,draft:null};
+const S={token:localStorage.getItem('pms_token'),user:null,tab:null,fy:new Date().getFullYear(),quarter:nowQ(),review:null,page:1,filter:{q:'',r:'',s:''},auditAll:false,msg:null,draft:null,nf:{list:[],unread:0},nfFilter:'all'};
 
 async function api(method,path,body){
   const r=await fetch('/api'+path,{method,headers:{'content-type':'application/json',...(S.token?{authorization:'Bearer '+S.token}:{})},body:body?JSON.stringify(body):undefined});
@@ -138,7 +159,7 @@ async function api(method,path,body){
   if(!r.ok)throw new Error(j.error||'Something went wrong.');
   return j;
 }
-function logout(){localStorage.removeItem('pms_token');S.token=null;S.user=null;S.creds=null;S.edit=null;S.review=null;S.draft=null;render();}
+function logout(){localStorage.removeItem('pms_token');S.token=null;S.user=null;S.creds=null;S.edit=null;S.review=null;S.draft=null;S.nf={list:[],unread:0};render();}
 const ratingClass=l=>({'Outstanding':'r-o','Exceeds Expectation':'r-e','Meets Expectation':'r-m'}[l]||'r-b');
 const fmtDate=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
 const fmtTime=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
@@ -152,7 +173,7 @@ function shell(inner){
   <div class="hrow"><div class="logo">${LOGO}<span class="hd">Strata</span></div>
   <div class="welcome"><div><h1>Welcome, ${esc(u.name.split(' ')[0])}</h1><div class="d">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
   <dl><div><dt>Job title</dt><dd>${esc(u.job_title||'')}</dd></div><div><dt>Email</dt><dd>${esc(u.email)}</dd></div><div><dt>Line manager</dt><dd>${esc(u.line_manager||'–')}</dd></div><div><dt>Practice area</dt><dd>${esc(u.practice||'')}</dd></div></dl></div>
-  <div style="text-align:right"><div style="color:var(--ink2)">Performance Management System</div><span class="pill">${esc(ROLE[u.role])}</span> <button class="btn o sm" data-act="logout">Sign out</button></div></div>
+  <div style="text-align:right"><div style="display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-bottom:6px"><span style="color:var(--ink2)">Performance Management System</span>${bellHtml()}</div><span class="pill">${esc(ROLE[u.role])}</span> <button class="btn o sm" data-act="logout">Sign out</button></div></div>
   <div class="tabrow"><div class="tabs" role="tablist">${tabs.map(t=>`<button class="tab" role="tab" aria-selected="${S.tab===t&&!S.review}" data-tab="${t}">${TABNAME[t]}</button>`).join('')}</div>
   <div class="row"><label class="l" style="margin:0" for="fy">Quarter</label><select id="fy" class="f" style="width:150px"><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select><span class="muted">FY${S.fy}</span></div></div>
   </div></header><main class="wrap">${S.msg?`<div class="msg ${S.msg.t}">${esc(S.msg.m)}</div>`:''}${inner}</main>`;
@@ -161,6 +182,9 @@ function bindShell(){
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.review=null;S.page=1;S.msg=null;S.creds=null;S.edit=null;S.gedit=null;render();});
   const q=document.getElementById('fy');if(q){q.value=S.quarter;q.onchange=()=>{S.quarter=q.value;S.review=null;S.draft=null;S.page=1;render();};}
   const lo=document.querySelector('[data-act=logout]');if(lo)lo.onclick=logout;
+  const bl=document.querySelector('[data-bell]');
+  if(bl)bl.onclick=e=>{e.stopPropagation();const w=bl.parentElement,ex=w.querySelector('.nfdd');if(ex){ex.remove();bl.setAttribute('aria-expanded','false');return;}
+    w.insertAdjacentHTML('beforeend',`<div class="nfdd" role="dialog" aria-label="Notifications">${ddHtml()}</div>`);bl.setAttribute('aria-expanded','true');bindDd(w.querySelector('.nfdd'));};
 }
 
 /* ---------- login ---------- */
@@ -533,6 +557,60 @@ async function peopleView(){
     catch(e){cimp.disabled=false;cm.innerHTML=`<div class="msg err">${esc(e.message)}<ul class="errl">${(e.errors||[]).slice(0,15).map(x=>`<li>Row ${x.row} (${esc(x.email)}): ${esc(x.error)}</li>`).join('')}${(e.errors||[]).length>15?`<li>…and ${e.errors.length-15} more</li>`:''}</ul></div>`;}};
 }
 
+/* ---------- notifications ---------- */
+const NIC={
+ returned:['#FFF3DC','#B45309','<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>'],
+ commented:['#EAF2F7','#0C6291','<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'],
+ submitted:['#EAF2F7','#0C6291','<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
+ final:['#E3F4E8','#1E7B3A','<path d="M5 12l5 5 9-10"/>'],
+ goals:['#EAF2F7','#0C6291','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>'],
+ welcome:['#EAF2F7','#0C6291','<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>']};
+NIC.awaiting=NIC.submitted;
+const svgI=(p,sz)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const nIcon=t=>{const c=NIC[t]||NIC.submitted;return `<span class="nic" style="background:${c[0]};color:${c[1]}">${svgI(c[2],20)}</span>`;};
+const bellHtml=()=>{const n=S.nf.unread;return `<span class="bellwrap"><button type="button" class="bell" data-bell aria-label="Notifications${n?`, ${n} unread`:''}" aria-expanded="false">${svgI('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',22)}${n?`<span class="bdg">${n>9?'9+':n}</span>`:''}</button></span>`;};
+function ago(d){const m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return 'Just now';if(m<60)return m+(m===1?' minute ago':' minutes ago');const h=Math.floor(m/60);if(h<24)return h+(h===1?' hour ago':' hours ago');const dd=Math.floor(h/24);if(dd===1)return 'Yesterday';if(dd<7)return dd+' days ago';return fmtDate(d);}
+const isToday=d=>new Date(d).toDateString()===new Date().toDateString();
+const nItem=n=>`<button type="button" class="nfi${n.read_at?'':' un'}" data-nf="${n.id}">${nIcon(n.type)}<span class="nb"><b>${esc(n.title)}</b>${n.body?`<span>${esc(n.body)}</span>`:''}<small>${ago(n.created_at)}</small></span>${n.read_at?'':'<i class="dot" aria-label="Unread"></i>'}</button>`;
+const ddHtml=()=>{const l=(S.nf.list||[]).slice(0,5);return `<div class="nfh"><h3>Notifications</h3>${S.nf.unread?'<button type="button" class="nlink" data-nfall>Mark all as read</button>':''}</div>${l.length?l.map(nItem).join(''):'<div class="nempty">You are all caught up.</div>'}<button type="button" class="nfv" data-nfview>View all notifications</button>`;};
+async function openNf(id){
+  const n=(S.nf.list||[]).find(x=>x.id===id);if(!n)return;
+  if(!n.read_at)await api('POST',`/v1/notifications/${id}/read`).catch(()=>{});
+  S.msg=null;S.draft=null;
+  if(n.scorecard_id){
+    if(n.employee_id===S.user.id){S.fy=n.fy;S.quarter=n.quarter;S.tab='mine';S.review=null;}
+    else{S.review=n.scorecard_id;S.auditAll=false;}
+  }
+  render();
+}
+async function markAll(){try{await api('POST','/v1/notifications/read-all');}catch(e){}render();}
+function bindNf(root){root.querySelectorAll('[data-nf]').forEach(b=>b.onclick=()=>openNf(b.dataset.nf));}
+function bindDd(dd){
+  bindNf(dd);
+  const a=dd.querySelector('[data-nfall]');if(a)a.onclick=markAll;
+  dd.querySelector('[data-nfview]').onclick=()=>{S.tab='notifs';S.review=null;S.msg=null;render();};
+}
+function paintBadge(){
+  const bl=document.querySelector('[data-bell]');if(!bl)return;
+  const n=S.nf.unread;let b=bl.querySelector('.bdg');
+  if(n&&!b){b=document.createElement('span');b.className='bdg';bl.appendChild(b);}
+  if(b){if(n)b.textContent=n>9?'9+':n;else b.remove();}
+  const d=document.querySelector('.nfdd');if(d){d.innerHTML=ddHtml();bindDd(d);}
+}
+async function pollNf(){if(!S.token||!S.user||document.hidden)return;try{const j=await api('GET','/v1/notifications');S.nf={list:j.notifications||[],unread:j.unread||0};paintBadge();}catch(e){}}
+if(!window._nfg){window._nfg=1;
+  document.addEventListener('click',e=>{const d=document.querySelector('.nfdd');if(d&&!d.contains(e.target)&&!e.target.closest('[data-bell]'))d.remove();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){const d=document.querySelector('.nfdd');if(d)d.remove();}});
+  setInterval(pollNf,60000);}
+async function notifView(){
+  const all=S.nf.list||[],un=all.filter(n=>!n.read_at),rows=S.nfFilter==='unread'?un:all;
+  const grp=(t,a)=>a.length?`<div class="ngh">${t}</div>${a.map(nItem).join('')}`:'';
+  $app.innerHTML=shell(`<section class="card ncard"><div class="nfh"><h2>Notifications</h2><div class="nact"><button type="button" class="npill" aria-pressed="${S.nfFilter!=='unread'}" data-nff="all">All</button><button type="button" class="npill" aria-pressed="${S.nfFilter==='unread'}" data-nff="unread">Unread (${un.length})</button>${un.length?'<button type="button" class="nlink" data-nfall>Mark all as read</button>':''}</div></div>${rows.length?grp('Today',rows.filter(n=>isToday(n.created_at)))+grp('Earlier',rows.filter(n=>!isToday(n.created_at))):`<div class="nempty">${S.nfFilter==='unread'?'No unread notifications.':'No notifications yet.'}</div>`}</section>`);
+  bindShell();bindNf(document.querySelector('.ncard'));
+  document.querySelectorAll('[data-nff]').forEach(b=>b.onclick=()=>{S.nfFilter=b.dataset.nff;notifView();});
+  const a=document.querySelector('.ncard [data-nfall]');if(a)a.onclick=markAll;
+}
+
 /* ---------- plumbing ---------- */
 let CFG;async function getCfg(){return CFG||(CFG=await api('GET','/v1/scorecards/config'));}
 function flash(t,m,stay){S.msg={t,m};if(stay){const el=document.querySelector('main');if(el){const old=el.querySelector('.msg');if(old)old.remove();el.insertAdjacentHTML('afterbegin',`<div class="msg ${t}">${esc(m)}</div>`);return;}}render();}
@@ -541,11 +619,15 @@ async function render(){
     if(!S.token){loginView();return;}
     if(!S.user){const j=await api('GET','/v1/auth/me');S.user=j.user;S.tab=S.tab||TABS[S.user.role][0];}
     if(S.user.must_change_password){changePwView();return;}
+    const nfp=S.keep?null:api('GET','/v1/notifications').then(j=>{S.nf={list:j.notifications||[],unread:j.unread||0};},()=>{});
+    if(nfp&&S.tab==='notifs'&&!S.review)await nfp;
     if(S.review)await reviewView();
+    else if(S.tab==='notifs')await notifView();
     else if(S.tab==='mine')await mineView();
     else if(S.tab==='goals')await goalsView();
     else if(S.tab==='people'&&S.user.is_admin)await peopleView();
     else await dashView();
+    if(nfp){await nfp;paintBadge();}
     S.msg=null;
   }catch(e){if(!S.token){loginView();return;}$app.innerHTML=S.user?shell(`<div class="msg err">${esc(e.message)}</div>`):`<div class="login"><div class="msg err">${esc(e.message)}</div></div>`;if(S.user)bindShell();}
 }
