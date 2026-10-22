@@ -280,7 +280,7 @@ async function mineView(){
   const cfg=await getCfg(),goals=keep?S.mc.goals:(await api('GET','/v1/goals?fy='+S.fy)).goals;
   S.mc={list,d,goals,q:S.quarter,fy:S.fy};
   const sc=d.scorecard,editable=sc.status==='draft';
-  if(!S.draft||S.draft.id!==sc.id||!editable)S.draft={id:sc.id,rows:arrange(hydrate(d.kpis),editable),url:sc.proof_of_work_url||''};
+  if(!S.draft||S.draft.id!==sc.id||!editable)S.draft={id:sc.id,rows:arrange(hydrate(d.kpis.filter(k=>k.parent_position==null)),editable),url:sc.proof_of_work_url||''};
   const T=S.draft;
   const me=S.user,lc=x=>String(x||'').toLowerCase();
   const visible={company:g=>true,practice:g=>!me.practice||lc(g.practice)===lc(me.practice),team:g=>g.owner_id===me.line_manager_id||g.owner_id===me.id};
@@ -296,7 +296,7 @@ async function mineView(){
     <div style="flex:0 1 420px;min-width:240px"><label class="l" for="pow">Proof of work (Notion link)</label><input id="pow" class="f" type="url" placeholder="https://www.notion.so/..." value="${esc(T.url)}" ${editable?'':'readonly'}></div></div>
     ${journey(sc,cfg)}<div class="tblwrap" style="margin-top:8px"><table class="sc"><thead><tr><th>#</th><th>KPI category</th><th>Weight %</th><th>KPI</th><th>Weight in category %</th><th>Self score</th><th>Manager</th>${editable?'<th></th>':''}</tr></thead><tbody id="kb">${kpiRows(T.rows,editable)}</tbody></table></div>
     <div id="wm"></div>
-    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'<span class="muted" style="font-size:13px">Use “+ Sub” on a KPI to break it into sub-KPIs. They share that KPI’s weight.</span>':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
+    <div style="padding:16px 24px 0;border-top:1px solid var(--row)" class="row">${editable?'':''}<span style="flex:1"></span>${editable?'<button class="btn o" id="save">Save draft</button><button class="btn" id="sub">Submit Scorecard</button>':`<span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':''}"></span>${esc(STATUS[sc.status])}</span>`}</div>
     <div style="margin:16px 24px 0;padding-top:16px;border-top:1px solid var(--row)" class="row"><span id="vs" style="font-weight:700"></span><span style="font-size:18px">Calculated score <strong id="tot" style="font-size:32px;color:var(--brand)"></strong> / 5</span><span id="rt"></span>${sc.manager_total!=null?`<span>Manager score <span class="chip ${ratingClass(sc.rating)}">${sc.manager_total.toFixed(2)}</span> ${esc(sc.rating||'')}</span>`:''}</div>
     ${sc.status!=='draft'?`<div style="padding:0 24px"><button class="btn o sm" style="margin-top:12px" data-open="${sc.id}">Open review page</button></div>`:''}</section></div>${commentsBlock(d)}`);
   bindShell();
@@ -336,7 +336,7 @@ function kpiRow(r,i,ed,rows,label,first){const a=ed?'':'readonly';const sub=!!r.
   const self=hasKids?`<span class="derived" data-dself="${r.uid}">${f2(effScore(rows,r,'self_score'))}</span>`
     :ed?`<input class="f num" type="number" min="1" max="5" step="1" data-i="${i}" data-f="self_score" value="${esc(r.self_score==null?'':r.self_score)}">`:esc(r.self_score==null?'–':r.self_score);
   const mg=hasKids?f2(effScore(rows,r,'manager_score')):(r.manager_score==null?'–':r.manager_score);
-  return `<tr class="${sub?'subrow':''}"><td>${label}</td><td>${catCell}</td><td>${sub||!first?'':inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi,'',sub?'Sub-KPI':'')}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}${sub?'<br><small class="muted">% of main KPI</small>':''}</td><td>${self}</td><td style="font-weight:700">${mg}</td>${ed?`<td style="white-space:nowrap">${sub?'':`<button class="btn o sm" data-sub="${i}">+ Sub</button> `}<button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
+  return `<tr class="${sub?'subrow':''}"><td>${label}</td><td>${catCell}</td><td>${sub||!first?'':inp('category_weight',r.category_weight,'num')}</td><td>${inp('kpi',r.kpi,'',sub?'Sub-KPI':'')}</td><td>${inp('weight_in_category',r.weight_in_category,'num')}${sub?'<br><small class="muted">% of main KPI</small>':''}</td><td>${self}</td><td style="font-weight:700">${mg}</td>${ed?`<td style="white-space:nowrap"><button class="btn o sm" data-del="${i}" aria-label="Remove KPI">×</button></td>`:''}</tr>`;}
 function journey(sc,cfg){const idx=ORDER.indexOf(sc.status);let curDone=false;const e=sc.employee||{},ro=(cfg&&cfg.roles)||{};const who=[e.name,e.line_manager,e.overall_manager,ro.calibration,ro.cos,ro.ceo];
   return `<div class="journey" style="padding:0 24px">${JOURNEY.map(([n,st],i)=>{const done=idx>=ORDER.indexOf(st);const cur=!done&&!curDone&&sc.status!=='draft';if(cur)curDone=true;
     return `<div class="step ${done?'done':cur?'cur':''}"><b>${n}</b><span class="who">${esc(who[i]||'Not assigned')}</span>${done?'Done':cur?'In progress':sc.status==='draft'&&i===0?'To do':'Waiting'}</div>`;}).join('')}</div>`;}
