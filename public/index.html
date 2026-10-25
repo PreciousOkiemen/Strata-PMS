@@ -407,6 +407,7 @@ async function reviewView(){
   const step=cfg.flow.find(f=>f.from===sc.status);
   const mine=e.id===S.user.id;
   const aud=S.auditAll?d.audit:d.audit.slice(0,5);
+  const showAudit=!['employee','line_manager'].includes(S.user.role);
   $app.innerHTML=shell(`<nav style="margin-bottom:12px"><a href="#" id="back" style="font-weight:700">‹ Back to dashboard</a></nav>
   <div class="card"><div class="row"><div style="flex:1"><h2 style="margin:0;color:var(--brand)">${esc(e.name)}</h2><div class="muted">${esc(e.job_title||'')} · ${esc(e.practice||'')} · Line manager: ${esc(e.line_manager||'–')} · Overall manager: ${esc(e.overall_manager||'–')}</div></div>
    <span class="st"><span class="dot ${sc.status==='ceo_approved'?'ok':act?'':'grey'}"></span>${act?'Waiting for you':esc(STATUS[sc.status])}</span></div>
@@ -420,8 +421,8 @@ async function reviewView(){
        return `<tr class="${sub?'subrow':''}"><td>${sub?n+'.'+m:n}</td><td>${sub?'↳ '+esc(k.sub_category||''):esc(k.category)}</td><td>${sub?'–':k.category_weight+'%'}</td><td>${esc(k.kpi)}</td><td>${k.weight_in_category}%${sub?' <small class="muted">of KPI</small>':''}</td><td>${self}</td><td>${mgr}</td></tr>`;}).join('');})()}</tbody></table></div>
    ${act&&!mine?`<div style="padding:16px 24px 0;border-top:1px solid var(--row)"><div class="row">${isLM?'<button class="btn o" id="svm">Save scores</button>':''}<button class="btn" id="ap">${isLM?'Send to overall manager':'Approve: '+esc(step.label)}</button></div>
    <label class="l" for="rr" style="margin-top:16px">Return to previous step (give a reason)</label><div class="row"><input id="rr" class="f" style="flex:1" placeholder="Why is it being returned?"><button class="btn o" id="rt">Return</button></div></div>`:''}</div>
-  <div class="split" style="margin-top:16px"><section class="card"><h3 style="margin-top:0">Audit trail</h3>${aud.map(a=>`<div style="padding:8px 0;border-top:1px solid var(--row)"><b>${esc(auditText(a))}</b><div class="muted" style="font-size:13px">${esc(a.actor)} · ${fmtTime(a.created_at)}</div></div>`).join('')||'<div class="muted">Nothing yet.</div>'}${!S.auditAll&&d.audit.length>5?'<button class="btn o sm" id="more" style="margin-top:8px">Load more</button>':''}</section>
-  ${commentsBlock(d,true)}</div>`);
+  <div class="split" style="margin-top:16px${showAudit?'':';grid-template-columns:1fr'}">${!showAudit?'':`<section class="card"><h3 style="margin-top:0">Audit trail</h3>${aud.map(a=>`<div style="padding:8px 0;border-top:1px solid var(--row)"><b>${esc(auditText(a))}</b><div class="muted" style="font-size:13px">${esc(a.actor)} · ${fmtTime(a.created_at)}</div></div>`).join('')||'<div class="muted">Nothing yet.</div>'}${!S.auditAll&&d.audit.length>5?'<button class="btn o sm" id="more" style="margin-top:8px">Load more</button>':''}</section>`}
+   ${commentsBlock(d,true)}</div>`);
   bindShell();bindComments(sc.id);
   document.getElementById('back').onclick=ev=>{ev.preventDefault();S.review=null;render();};
   const more=document.getElementById('more');if(more)more.onclick=()=>{S.auditAll=true;render();};

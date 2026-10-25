@@ -93,7 +93,7 @@ router.get('/:id', async (req, res, next) => {
       query(`SELECT s.stage,s.decision,s.signed_at,u.name AS signer FROM signatures s JOIN users u ON u.id=s.signer_id
              WHERE scorecard_id=$1 ORDER BY signed_at`, [sc.id]),
     ]);
-    res.json({ scorecard: shape(sc, req.user), kpis: kpis.rows, comments: comments.rows, audit: audits.rows, signatures: sigs.rows });
+    res.json({ scorecard: shape(sc, req.user), kpis: kpis.rows, comments: comments.rows, audit: ['employee', 'line_manager'].includes(req.user.role) ? [] : audits.rows, signatures: sigs.rows });
   } catch (e) { next(e); }
 });
 
