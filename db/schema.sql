@@ -107,3 +107,26 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS policy_docs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  version int NOT NULL,
+  title text NOT NULL,
+  filename text,
+  content text NOT NULL,
+  active boolean NOT NULL DEFAULT false,
+  uploaded_by uuid REFERENCES users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  published_at timestamptz
+);
+ALTER TABLE policy_docs ADD COLUMN IF NOT EXISTS published_at timestamptz;
+CREATE TABLE IF NOT EXISTS policy_sections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  doc_id uuid NOT NULL REFERENCES policy_docs(id) ON DELETE CASCADE,
+  position int NOT NULL,
+  heading text NOT NULL,
+  body text NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_policy ON policy_docs (active) WHERE active;
+CREATE INDEX IF NOT EXISTS idx_policy_sections_doc ON policy_sections(doc_id, position);
