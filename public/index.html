@@ -134,6 +134,34 @@ table.sc{min-width:1000px}.sc td:nth-child(2){min-width:210px}.sc td:nth-child(4
 .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:6px}
 .nfv{display:block;width:100%;padding:14px;border:0;border-top:1px solid var(--row);background:var(--tint2);color:var(--brand);font-weight:700}
 .nempty{padding:28px 20px;color:var(--muted);text-align:center}
+.pv{display:grid;gap:24px}.pv h2{margin:0 0 4px}.pv .lead{margin:0 0 16px;color:var(--ink2)}
+.pup{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.pup input[type=file]{flex:1;min-width:220px;font:inherit;font-size:14px}
+.psec{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:10px;background:#fff}.psec b{display:block}.psec span{color:var(--muted);font-size:13px}
+.pwarn{background:#FFF8E1;border:1px solid var(--warn);border-radius:8px;padding:10px 14px;margin:12px 0;font-size:14px}
+.pact{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+table.pt{min-width:0}.pt td{padding:10px 12px;border-top:1px solid var(--row);font-size:14px}
+.pchip{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--tint2);color:var(--ink2)}.pchip.on{background:var(--brand);color:#fff}
+#pchat{position:fixed;right:24px;bottom:24px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:12px;max-width:calc(100vw - 32px)}
+.pfab{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 20px;border:0;border-radius:9999px;background:var(--brand);color:#fff;font-weight:700;box-shadow:0 6px 20px rgba(12,98,145,.35)}
+.pfab:hover{background:#0A5278}.pfab:focus-visible,.pcl:focus-visible,.psend:focus-visible,.psug:focus-visible{outline:3px solid #BFE0F0;outline-offset:2px}
+.ppanel{width:400px;max-width:100%;height:min(620px,calc(100vh - 110px));background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 12px 40px rgba(16,22,25,.22);display:flex;flex-direction:column;overflow:hidden}
+.pph{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--brand);color:#fff}.pph b{font-family:"Instrument Sans",Arial,sans-serif;font-size:16px}
+.pcl{background:transparent;border:0;color:#fff;font-size:22px;line-height:1;width:32px;height:32px;border-radius:8px}.pcl:hover{background:rgba(255,255,255,.15)}
+.pbody{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--bg)}
+.pm{max-width:88%;padding:10px 14px;border-radius:14px;font-size:14px;white-space:pre-wrap;word-wrap:break-word}
+.pm.u{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:4px}
+.pm.a{align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px}
+.pm.e{align-self:flex-start;background:#FDECEA;color:var(--bad)}
+.psrc{display:block;margin-top:8px;font-size:12px;color:var(--muted);white-space:normal}
+.psugs{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.psug{text-align:left;background:#fff;border:1px solid var(--wborder);color:var(--brand);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600}.psug:hover{background:var(--tint2)}
+.pfoot{padding:12px 16px;border-top:1px solid var(--border);background:#fff}
+.pform{display:flex;gap:8px}.pform .f{flex:1}
+.psend{min-height:44px;padding:0 18px;border:0;border-radius:9999px;background:var(--brand);color:#fff;font-weight:700}.psend:disabled{opacity:.55;cursor:not-allowed}
+.pdis{margin:8px 0 0;font-size:11px;color:var(--muted)}
+.pdots span{display:inline-block;width:6px;height:6px;margin-right:4px;border-radius:50%;background:var(--muted);animation:pd 1s infinite}.pdots span:nth-child(2){animation-delay:.15s}.pdots span:nth-child(3){animation-delay:.3s}
+@keyframes pd{50%{opacity:.25}}
+@media(max-width:520px){#pchat{right:16px;bottom:16px}.ppanel{width:calc(100vw - 32px)}}
 </style>
 </head>
 <body>
@@ -147,8 +175,8 @@ const STATUS={draft:'Draft',submitted:'With line manager',line_scored:'With over
 const ORDER=['draft','submitted','line_scored','om_approved','calibrated','cos_approved','ceo_approved'];
 const JOURNEY=[['Self score','submitted'],['Line manager','line_scored'],['Overall manager','om_approved'],['Calibration','calibrated'],['Chief of Staff','cos_approved'],['CEO','ceo_approved']];
 const TABS={employee:['mine'],line_manager:['mine','reports','goals'],overall_manager:['mine','dash','goals'],calibration:['dash'],cos:['mine','dash','goals'],ceo:['dash','goals']};
-const TABNAME={mine:'My scorecard',reports:'Direct reports',dash:'Dashboard',goals:'Goals',people:'People'};
-const tabsFor=u=>TABS[u.role].concat(u.is_admin?['people']:[]);
+const TABNAME={mine:'My scorecard',reports:'Direct reports',dash:'Dashboard',goals:'Goals',people:'People',policy:'Policy'};
+const tabsFor=u=>TABS[u.role].concat(u.is_admin?['people','policy']:[]);
 const nowQ=()=>'Q'+(Math.floor(new Date().getMonth()/3)+1);
 const S={token:localStorage.getItem('pms_token'),user:null,tab:null,fy:new Date().getFullYear(),quarter:nowQ(),review:null,page:1,filter:{q:'',r:'',s:''},auditAll:false,msg:null,draft:null,nf:{list:[],unread:0},nfFilter:'all'};
 
@@ -159,7 +187,7 @@ async function api(method,path,body){
   if(!r.ok)throw new Error(j.error||'Something went wrong.');
   return j;
 }
-function logout(){localStorage.removeItem('pms_token');S.token=null;S.user=null;S.creds=null;S.edit=null;S.review=null;S.draft=null;S.nf={list:[],unread:0};render();}
+function logout(){localStorage.removeItem('pms_token');S.token=null;S.user=null;S.creds=null;S.edit=null;S.review=null;S.draft=null;S.pdraft=null;S.nf={list:[],unread:0};chatReset();render();}
 const ratingClass=l=>({'Outstanding':'r-o','Exceeds Expectation':'r-e','Meets Expectation':'r-m'}[l]||'r-b');
 const fmtDate=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
 const fmtTime=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
@@ -612,6 +640,80 @@ async function notifView(){
   const a=document.querySelector('.ncard [data-nfall]');if(a)a.onclick=markAll;
 }
 
+/* ---------- policy (Chief of Staff) ---------- */
+const fileB64=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(new Error('Could not read that file.'));r.readAsDataURL(f);});
+function secList(secs){return secs.map(s=>`<div class="psec"><b>${esc(s.heading)}</b><span>${esc(s.excerpt)}</span></div>`).join('');}
+async function policyView(){
+  const [v,cur]=await Promise.all([api('GET','/v1/policy/versions'),api('GET','/v1/policy/current')]);
+  const live=cur.policy,d=S.pdraft,vs=v.versions;
+  const generic=d&&d.sections.length&&d.sections.every(s=>/^Part \d+$/.test(s.heading));
+  const draftBox=d?`<section class="card"><h2>Check before publishing</h2><p class="lead">${esc(d.filename)} was split into ${d.sections.length} section${d.sections.length===1?'':'s'}. This is what the assistant will search. Nothing is live until you publish.</p>${generic?'<div class="pwarn">No section headings were found, so the file was cut into numbered parts. Answers will still work, but headings in the source file give better results.</div>':''}${secList(d.sections)}<div class="pact"><button class="btn" data-pub="${esc(d.id)}">Publish this policy</button><button class="btn o" data-discard>Discard</button></div></section>`:'';
+  const rows=vs.map(x=>`<tr><td>${x.published_at?'v'+x.version:'<span class="muted">Draft</span>'}</td><td>${esc(x.filename||x.title)}</td><td>${esc(x.uploaded_by||'')}</td><td>${fmtDate(x.created_at)}</td><td>${x.active?'<span class="pchip on">Live</span>':x.published_at?'<span class="pchip">Earlier</span>':'<span class="pchip">Not published</span>'}</td><td style="text-align:right">${x.active?'':x.published_at?`<button class="btn o sm" data-pub="${esc(x.id)}">Make live</button>`:`<button class="btn o sm" data-rev="${esc(x.id)}">Review</button>`}</td></tr>`).join('');
+  $app.innerHTML=shell(`<div class="pv"><section class="card"><h2>Performance policy</h2>
+  <p class="lead">${live?`Live now: <b>${esc(live.title)}</b> (version ${live.version}). Everyone can ask the Policy assistant about it.`:'No policy is live yet. Upload the policy document and the Policy assistant will answer from it.'}</p>
+  <div id="pmsg"></div>
+  <div class="pup"><input id="pfile" type="file" accept=".pdf,.docx,.txt,.md" aria-label="Policy file"><button class="btn" id="pup">Upload and preview</button></div>
+  <p class="muted" style="margin:10px 0 0;font-size:13px">PDF, Word (.docx) or text, up to 3 MB. Word files give the best results.</p></section>
+  ${draftBox}
+  ${vs.length?`<section class="card"><h2>Versions</h2><div class="tblwrap"><table class="pt"><thead><tr><th>Version</th><th>File</th><th>Uploaded by</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></section>`:''}</div>`);
+  bindShell();S.msg=null;
+  const pm=m=>{document.getElementById('pmsg').innerHTML=`<div class="msg err">${esc(m)}</div>`;};
+  const up=document.getElementById('pup');
+  up.onclick=()=>withBusy(up,'Reading file',async()=>{
+    const f=document.getElementById('pfile').files[0];
+    if(!f){pm('Choose a file first.');return;}
+    if(f.size>3*1024*1024){pm('That file is too large. The limit is 3 MB.');return;}
+    try{S.pdraft=await api('POST','/v1/policy/upload',{filename:f.name,data:await fileB64(f)});S.msg=null;await policyView();}catch(e){pm(e.message);}
+  });
+  document.querySelectorAll('[data-pub]').forEach(b=>b.onclick=()=>withBusy(b,'Publishing',async()=>{
+    try{await api('POST','/v1/policy/'+b.dataset.pub+'/publish');S.pdraft=null;C.pol=undefined;C.msgs=[];chatPaint();S.msg={t:'ok',m:'The policy is live.'};await policyView();}catch(e){pm(e.message);}
+  }));
+  document.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>withBusy(b,'Loading',async()=>{
+    try{S.pdraft=await api('GET','/v1/policy/'+b.dataset.rev);await policyView();}catch(e){pm(e.message);}
+  }));
+  const dc=document.querySelector('[data-discard]');if(dc)dc.onclick=()=>{S.pdraft=null;policyView();};
+}
+
+/* ---------- policy assistant (everyone) ---------- */
+let C={open:false,pol:undefined,sug:[],msgs:[],busy:false};
+function chatReset(){C={open:false,pol:undefined,sug:[],msgs:[],busy:false};const el=document.getElementById('pchat');if(el)el.remove();}
+function chatSync(){
+  if(!S.user||S.user.must_change_password){const el=document.getElementById('pchat');if(el)el.remove();return;}
+  if(!document.getElementById('pchat')){const el=document.createElement('div');el.id='pchat';document.body.appendChild(el);chatPaint();}
+}
+function chatPaint(){
+  const el=document.getElementById('pchat');if(!el)return;
+  const keep=el.querySelector('.pbody'),top=keep?keep.scrollTop:0,typed=(el.querySelector('#pq')||{}).value||'';
+  const body=C.pol===undefined?'<div class="pm a"><span class="pdots"><span></span><span></span><span></span></span></div>'
+   :!C.pol?`<div class="pm a">No policy has been published yet.${S.user.is_admin?' Upload it from the Policy tab.':' Please check back soon.'}</div>`
+   :`<div class="pm a">Hi ${esc(S.user.name.split(' ')[0])}. Ask me anything about the performance policy.</div>`
+    +(C.msgs.length?'':`<div class="psugs">${C.sug.map(q=>`<button type="button" class="psug" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`)
+    +C.msgs.map(m=>`<div class="pm ${m.r}">${esc(m.t)}${m.src?`<span class="psrc">Source: ${esc(m.src)}</span>`:''}</div>`).join('')
+    +(C.busy?'<div class="pm a"><span class="pdots"><span></span><span></span><span></span></span></div>':'');
+  el.innerHTML=(C.open?`<div class="ppanel" role="dialog" aria-label="Policy assistant"><div class="pph"><b>Policy assistant</b><button type="button" class="pcl" data-pclose aria-label="Close">×</button></div><div class="pbody" aria-live="polite">${body}</div><div class="pfoot">${C.pol?`<form class="pform" id="pf"><input id="pq" class="f" maxlength="500" placeholder="Ask about the policy" autocomplete="off" aria-label="Your question"><button class="psend" ${C.busy?'disabled':''}>Send</button></form>`:''}<p class="pdis">Answers come from the published policy. For anything unclear, ask HR or your line manager.</p></div></div>`:'')
+   +`<button type="button" class="pfab" data-pfab aria-expanded="${C.open}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Policy assistant</button>`;
+  const nb=el.querySelector('.pbody');if(nb){nb.scrollTop=C.msgs.length||C.busy?nb.scrollHeight:top;}
+  const q=el.querySelector('#pq');if(q&&typed)q.value=typed;
+  el.querySelector('[data-pfab]').onclick=chatToggle;
+  const cl=el.querySelector('[data-pclose]');if(cl)cl.onclick=chatToggle;
+  el.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>chatAsk(b.dataset.q));
+  const f=el.querySelector('#pf');if(f)f.onsubmit=e=>{e.preventDefault();const i=el.querySelector('#pq'),t=i.value.trim();if(t){i.value='';chatAsk(t);}};
+  el.onkeydown=e=>{if(e.key==='Escape'&&C.open)chatToggle();};
+}
+async function chatToggle(){
+  C.open=!C.open;chatPaint();
+  if(!C.open){const b=document.querySelector('[data-pfab]');if(b)b.focus();return;}
+  if(C.pol===undefined){try{const j=await api('GET','/v1/policy/current');C.pol=j.policy;C.sug=j.suggestions||[];}catch(e){C.pol=null;}chatPaint();}
+  const q=document.getElementById('pq');if(q)q.focus();
+}
+async function chatAsk(text){
+  if(C.busy)return;
+  C.msgs.push({r:'u',t:text});C.busy=true;chatPaint();
+  try{const j=await api('POST','/v1/policy/ask',{question:text});C.msgs.push({r:'a',t:j.answer,src:j.source});}
+  catch(e){if(!S.token)return;C.msgs.push({r:'e',t:e.message});}
+  C.busy=false;chatPaint();const q=document.getElementById('pq');if(q)q.focus();
+}
+
 /* ---------- plumbing ---------- */
 let CFG;async function getCfg(){return CFG||(CFG=await api('GET','/v1/scorecards/config'));}
 function flash(t,m,stay){S.msg={t,m};if(stay){const el=document.querySelector('main');if(el){const old=el.querySelector('.msg');if(old)old.remove();el.insertAdjacentHTML('afterbegin',`<div class="msg ${t}">${esc(m)}</div>`);return;}}render();}
@@ -627,8 +729,10 @@ async function render(){
     else if(S.tab==='mine')await mineView();
     else if(S.tab==='goals')await goalsView();
     else if(S.tab==='people'&&S.user.is_admin)await peopleView();
+    else if(S.tab==='policy'&&S.user.is_admin)await policyView();
     else await dashView();
     if(nfp){await nfp;paintBadge();}
+    chatSync();
     S.msg=null;
   }catch(e){if(!S.token){loginView();return;}$app.innerHTML=S.user?shell(`<div class="msg err">${esc(e.message)}</div>`):`<div class="login"><div class="msg err">${esc(e.message)}</div></div>`;if(S.user)bindShell();}
 }
